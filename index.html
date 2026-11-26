@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="港股低预期">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+<title>港股优质低预期</title>
+<style>
+:root{
+  --bg:#f5f6f8;--panel:#ffffff;--line:#e3e6eb;--text:#1b1f24;--muted:#6b7380;
+  --accent:#2f6fde;--up:#d7263d;--down:#1a9b5c;--warn:#c77700;--chip:#eef2f8;--good:#1a9b5c;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1216;--panel:#171b21;--line:#2a3039;--text:#e6e9ee;--muted:#8b94a3;
+  --accent:#6b9bff;--up:#ff5a6e;--down:#3ccf8e;--warn:#f0a531;--chip:#222833;--good:#3ccf8e;}}
+:root[data-theme="dark"]{
+  --bg:#0f1216;--panel:#171b21;--line:#2a3039;--text:#e6e9ee;--muted:#8b94a3;
+  --accent:#6b9bff;--up:#ff5a6e;--down:#3ccf8e;--warn:#f0a531;--chip:#222833;--good:#3ccf8e;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+header{padding:18px 16px 10px;max-width:1440px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+h1{font-size:22px;margin:0}
+h3{font-size:14px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:12px}
+main{max-width:1440px;margin:0 auto;padding:0 16px 40px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.funnel{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:14px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;position:relative}
+.step .n{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.step .t{font-size:13px;font-weight:600}
+.step .d{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input[type=text],select,input[type=search]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit}
+input[type=range]{width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{padding:7px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;font:inherit}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:wait}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text)}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:1250px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);color:var(--muted);font-weight:500;font-size:12px;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+td.l,th.l{text-align:left}
+tr.main:hover td{background:var(--chip);cursor:pointer}
+tr.detail td{background:var(--bg);white-space:normal;text-align:left}
+.up{color:var(--up)}.down{color:var(--down)}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:var(--chip);margin:0 3px 2px 0;color:var(--text)}
+.tag.w{color:var(--warn)}
+.tag.bad{color:var(--up)}
+.tag.ok{color:var(--good)}
+.tag.hot{background:var(--accent);color:#fff}
+.moat-宽{color:var(--good);font-weight:600}
+.moat-窄{color:var(--text)}
+.bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px}
+.pos{position:relative;display:inline-block;width:60px;height:6px;background:var(--chip);border-radius:3px;vertical-align:middle}
+.pos i{position:absolute;top:-3px;width:4px;height:12px;border-radius:2px;background:var(--accent)}
+.star{cursor:pointer;color:var(--muted)}
+.star.on{color:var(--warn)}
+.status{font-size:12px;color:var(--muted)}
+.err{color:var(--up)}
+.note{font-size:12px;color:var(--muted);line-height:1.75}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;padding:6px 4px}
+.kv{font-size:12px;line-height:1.9}
+.kv b{display:inline-block;min-width:84px;color:var(--muted);font-weight:400}
+svg.spark{display:block;width:100%;height:70px}
+svg.spark text{font-size:10px;fill:var(--muted)}
+.progress{height:3px;background:var(--chip);border-radius:2px;overflow:hidden;margin-top:6px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+
+/* ---------- 手机版（卡片布局） ---------- */
+html{-webkit-text-size-adjust:100%}
+.cards,.mOnly{display:none}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--panel)}
+.card .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card .nm{font-size:16px;font-weight:600}
+.card .tags{margin:6px 0 8px}
+.card .scores{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.card .scores div{background:var(--chip);border-radius:8px;padding:6px 10px}
+.card .scores span.l{display:block;font-size:11px;color:var(--muted)}
+.card .scores b{font-size:20px}
+.card .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 8px;font-size:13px;font-variant-numeric:tabular-nums}
+.card .metrics span.l{display:block;font-size:11px;color:var(--muted)}
+.card .cd{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.card .more{font-size:12px;color:var(--accent);margin-top:8px;text-align:center}
+@media (max-width:767px){
+  header{padding:calc(12px + env(safe-area-inset-top)) 16px 8px;display:block}
+  header>div:last-child{min-width:0!important;margin-top:10px}
+  header .row{justify-content:flex-start!important}
+  h1{font-size:19px}
+  #status{text-align:left!important}
+  main{padding:0 12px calc(30px + env(safe-area-inset-bottom))}
+  .funnel{grid-template-columns:repeat(3,1fr);gap:6px}
+  .step{padding:8px}
+  .step .n{font-size:20px}
+  .step .t{font-size:11px}
+  .step .d{display:none}
+  .panel{padding:10px}
+  .grid{grid-template-columns:1fr 1fr;gap:8px}
+  input[type=text],input[type=search],select{font-size:16px} /* 防止 iOS 聚焦时自动放大 */
+  .tablewrap{display:none}
+  .cards,.mOnly{display:block}
+  .tabs{position:sticky;top:0;z-index:5;background:var(--panel);padding:6px 0;margin-top:-6px}
+  .tabs button{flex:1;padding:8px 4px;font-size:13px}
+  .dgrid{grid-template-columns:1fr;gap:10px;padding:0}
+  #filters:not([open]) .grid{display:none}
+}
+@media (min-width:768px){ #filters>summary{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>港股优质低预期监测</h1>
+    <div class="sub">先选好生意（格局好、主业稳、护城河深）→ 排除基本面恶化 → 再找市场预期低的。数据：东方财富财报 + 腾讯行情。仅供研究，不构成投资建议。</div>
+  </div>
+  <div style="min-width:280px">
+    <div class="row" style="justify-content:flex-end">
+      <label class="chk" style="margin:0"><input type="checkbox" id="auto"> 自动刷新行情</label>
+      <select id="interval" style="width:auto"><option value="60">1 分钟</option><option value="300" selected>5 分钟</option><option value="900">15 分钟</option></select>
+      <button class="primary" id="refresh">刷新行情</button>
+      <button id="reloadFin" title="财报与历史估值默认缓存 24 小时">重拉财报</button>
+    </div>
+    <div class="status" id="status" style="text-align:right;margin-top:6px">未加载</div>
+    <div class="progress"><i id="prog"></i></div>
+  </div>
+</header>
+<main>
+  <div class="funnel" id="funnel"></div>
+
+  <details class="panel" id="filters" open>
+    <summary class="status" style="cursor:pointer">筛选：护城河 / 格局 / 行业 / 搜索</summary>
+    <div class="grid" style="margin-top:8px">
+      <div><label>护城河</label><select id="fMoat"><option value="">宽 + 窄</option><option value="宽">只看宽护城河</option></select></div>
+      <div><label>行业格局</label><select id="fStruct"><option value="">全部</option></select></div>
+      <div><label>行业</label><select id="fInd"><option value="">全部</option></select></div>
+      <div><label>搜索代码 / 名称</label><input type="search" id="q" placeholder="如 00700 或 腾讯"></div>
+      <div>
+        <label>显示</label>
+        <label class="chk"><input type="checkbox" id="showWatch" checked> 包含「需留意」（1 项轻微预警）</label>
+        <label class="chk"><input type="checkbox" id="onlyStar"> 只看自选</label>
+      </div>
+    </div>
+  </details>
+
+  <div class="panel">
+    <div class="tabs" id="tabs">
+      <button data-tab="pass" class="on">优质低预期</button>
+      <button data-tab="fail">已排除</button>
+      <button data-tab="method">方法与股票池</button>
+    </div>
+
+    <div id="tab-pass">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <span class="status" id="count">点击行展开：主营业务、护城河、ROE 与估值历史</span>
+        <div class="row">
+          <select id="mSort" class="mOnly" style="width:auto">
+            <option value="low:-1">按 低预期分</option>
+            <option value="quality:-1">按 质量分</option>
+            <option value="histPct:1">按 估值分位（低→高）</option>
+            <option value="gap:-1">按 杀估值幅度</option>
+            <option value="dy:-1">按 股息率</option>
+            <option value="pct:-1">按 今日涨幅</option>
+          </select>
+          <button id="csv">导出 CSV</button>
+        </div>
+      </div>
+      <div class="tablewrap"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div id="tab-fail" style="display:none">
+      <div class="note" style="margin-bottom:8px">以下公司虽在优质池里，但最新财报出现基本面恶化信号（任一「硬伤」或两项以上「预警」），从排行中剔除。它们的低估值很可能是合理的，而不是错杀。</div>
+      <div class="tablewrap"><table style="min-width:900px"><thead><tr><th class="l">代码</th><th class="l">名称</th><th class="l">行业</th><th class="l">护城河</th><th>现价</th><th>PE</th><th>最新营收同比</th><th>最新净利同比</th><th>ROE(年化)</th><th class="l">恶化原因</th></tr></thead><tbody id="failBody"></tbody></table></div>
+      <div class="cards" id="failCards"></div>
+    </div>
+
+    <div id="tab-method" style="display:none" class="note">
+      <h3 style="color:var(--text)">第一层：好生意（人工评估，可修改）</h3>
+      池子里的每家公司都标注了<b>行业格局</b>（垄断/特许经营 › 双寡头 › 寡头 › 竞争较激烈）、<b>护城河宽度</b>（宽 / 窄）和<b>护城河来源</b>（网络效应、品牌、牌照、规模成本、转换成本、资源等）。
+      格局恶劣、无护城河的行业（如价格战中的整车、光伏、地产开发）不进池。这部分是定性判断，请按你自己的认知增删——在本文件顶部的 <code>POOL</code> 数组里改，或在下面临时添加代码。
+      <div class="row" style="margin:8px 0 14px"><input type="text" id="addCode" placeholder="输入港股代码，如 00700，多个用空格隔开" style="max-width:340px"><button id="addBtn">加入池子（仅做财务体检）</button><button id="clearAdd">清空自定义</button><span id="addList"></span></div>
+
+      <h3 style="color:var(--text)">第二层：财务质量分 + 基本面体检（自动，基于近 7 年财报）</h3>
+      <b>质量分</b>（0–100）：5 年平均 ROE 水平（30%）、ROE 稳定性 = 5 年最低/平均（20%）、营收增长的连续性（15%）、毛利率稳定性（15%，金融股改用 ROE 稳定性）、经营现金流/净利润（10%，金融股不计）、格局+护城河人工评级（10%）。<br>
+      <b>体检</b>：<span class="tag bad">硬伤</span> 任一即排除：滚动利润为负；最新期归母净利同比 &lt; −20%。
+      <span class="tag w">预警</span> 两项及以上即排除，一项标为「需留意」：营收连续两期同比下滑；年化 ROE 低于 5 年均值的 75%；毛利率比 3 年均值低 3 个百分点以上；滚动 EPS 比一年前低 10% 以上；资产负债率比 3 年前上升 10 个百分点以上（非金融）。
+
+      <h3 style="color:var(--text);margin-top:14px">第三层：低预期分（实时，权重可调）</h3>
+      <div class="grid" id="weights" style="margin:6px 0 8px"></div>
+      <b>自身历史估值分位</b>：当前 PE 在过去 5 年月度 PE 中的分位（银行/保险/券商用 PB），越低越高分——跟自己比，不跟别的行业比。<br>
+      <b>杀估值不杀业绩</b>：过去 12 个月滚动 EPS 变化 − 股价变化。业绩涨、股价跌，说明市场预期被压缩，差值越大越高分。<br>
+      <b>52 周位置</b>：股价越靠近一年内低点越高分。<b>股息率</b>：7% 及以上给满分。<br>
+      <b>重点关注</b> = 通过体检 + 质量分 ≥ 60 + 低预期分 ≥ 65。
+    </div>
+  </div>
+</main>
+
+<script>
+/* =====================================================================
+   第一层：优质公司池（人工定性评估，按需修改）
+   字段：代码 | 名称 | 行业 | 格局 | 护城河(宽/窄) | 护城河来源 | 核心业务
+   ===================================================================== */
+const POOL_TEXT = `
+00700|腾讯控股|互联网|垄断/特许|宽|网络效应、转换成本|微信社交生态 + 游戏 + 广告 + 金融科技
+09988|阿里巴巴-W|互联网|寡头|窄|规模、网络效应|淘宝天猫电商 + 阿里云
+09999|网易-S|游戏|双寡头|窄|IP 与研发能力|自研网络游戏（与腾讯形成双寡头）
+09618|京东集团-SW|电商零售|寡头|窄|物流基础设施、规模成本|自营电商 + 京东物流
+01024|快手-W|互联网|双寡头|窄|网络效应|短视频与直播（与抖音双寡头）+ 广告电商
+09888|百度集团-SW|互联网|垄断/特许|窄|规模、数据|搜索广告 + 智能云
+09961|携程集团-S|在线旅游|垄断/特许|宽|网络效应、规模|在线酒店机票预订（国内 OTA 龙头）
+03690|美团-W|本地生活|寡头|窄|网络效应、地推与配送网络|外卖 + 到店酒旅
+02057|中通快递-W|快递物流|寡头|窄|规模成本|加盟制快递网络（成本领先）
+00941|中国移动|电信|寡头|宽|牌照、网络规模|移动通信 + 宽带（三家寡头之首）
+00728|中国电信|电信|寡头|窄|牌照、网络规模|固网宽带 + 移动 + 云
+00762|中国联通|电信|寡头|窄|牌照、网络规模|移动 + 宽带 + 产业互联网
+00788|中国铁塔|通信基础设施|垄断/特许|宽|垄断地位、站址资源|通信铁塔租赁
+00388|香港交易所|交易所|垄断/特许|宽|法定垄断、网络效应|香港证券/衍生品交易与结算
+03968|招商银行|银行|竞争较激烈|宽|零售客户与品牌|零售银行 + 财富管理
+01398|工商银行|银行|寡头|窄|低成本存款、规模|国有大行
+00939|建设银行|银行|寡头|窄|低成本存款、规模|国有大行（按揭强项）
+03988|中国银行|银行|寡头|窄|低成本存款、海外网络|国有大行（国际化）
+01288|农业银行|银行|寡头|窄|县域网络、低成本存款|国有大行（县域）
+00005|汇丰控股|银行|寡头|窄|全球网络、港元发钞|跨境银行与财富管理
+02388|中银香港|银行|寡头|窄|港元发钞行、规模|香港本地银行
+01299|友邦保险|保险|寡头|宽|代理人渠道、品牌|亚太寿险
+02318|中国平安|保险|寡头|窄|综合金融、渠道|寿险 + 财险 + 银行
+02628|中国人寿|保险|寡头|窄|渠道、规模|国内寿险龙头
+02328|中国财险|保险|寡头|宽|规模、定价数据|国内财险（车险）龙头
+06030|中信证券|券商|寡头|窄|规模、牌照|国内头部券商
+00002|中电控股|公用事业|垄断/特许|宽|管制电网、特许经营|香港电力（准许回报）
+00006|电能实业|公用事业|垄断/特许|宽|管制资产|全球受规管电网与燃气资产
+00003|香港中华煤气|公用事业|垄断/特许|宽|管网垄断|香港燃气 + 内地城燃
+01038|长江基建集团|公用事业|垄断/特许|窄|管制资产|全球受规管基础设施
+00270|粤海投资|公用事业|垄断/特许|宽|独家供水|东深供水（供港供深）
+02688|新奥能源|城市燃气|垄断/特许|窄|城燃特许经营|城市燃气 + 综合能源
+01193|华润燃气|城市燃气|垄断/特许|窄|城燃特许经营|城市燃气
+00135|昆仑能源|城市燃气|垄断/特许|窄|特许经营、气源|天然气销售 + LNG
+00384|中国燃气|城市燃气|垄断/特许|窄|城燃特许经营|城市燃气
+00066|港铁公司|交通基础设施|垄断/特许|宽|独家经营 + 物业开发权|香港铁路 + 车站物业
+00177|江苏宁沪高速公路|收费公路|垄断/特许|窄|特许经营|沪宁高速等收费公路
+00548|深圳高速公路股份|收费公路|垄断/特许|窄|特许经营|深圳及周边收费公路
+00576|浙江沪杭甬|收费公路|垄断/特许|窄|特许经营|浙江收费公路 + 证券
+00144|招商局港口|港口|寡头|窄|区位稀缺|全球港口码头
+00823|领展房产基金|商业地产|寡头|窄|区位稀缺|香港社区商场与停车场
+01209|华润万象生活|物业/商管|寡头|窄|品牌、商业运营能力|购物中心运营 + 物管
+00836|华润电力|电力|寡头|窄|规模、电网接入|火电 + 新能源发电
+01088|中国神华|煤炭|寡头|宽|资源、煤电路港一体化|煤炭 + 电力 + 铁路港口
+00883|中国海洋石油|石油|寡头|宽|资源、低成本|海上油气勘探开采（成本领先）
+00857|中国石油股份|石油|寡头|窄|资源、管网|油气上下游一体化
+02899|紫金矿业|有色金属|竞争较激烈|窄|资源、低成本|铜金矿开采
+01378|中国宏桥|有色金属|寡头|窄|规模成本、产能指标|电解铝（产能天花板）
+00914|海螺水泥|建材|寡头|窄|区域规模、成本|水泥（华东龙头）
+00669|创科实业|电动工具|寡头|宽|品牌、电池平台转换成本|Milwaukee / Ryobi 电动工具
+02319|蒙牛乳业|乳制品|双寡头|窄|品牌、渠道|液态奶（与伊利双寡头）
+00291|华润啤酒|啤酒|寡头|窄|品牌、渠道、产能|啤酒 + 白酒
+00168|青岛啤酒股份|啤酒|寡头|窄|品牌|啤酒
+01876|百威亚太|啤酒|寡头|窄|品牌、高端化|高端啤酒
+00322|康师傅控股|食品饮料|双寡头|窄|品牌、渠道|方便面 + 饮料
+00220|统一企业中国|食品饮料|双寡头|窄|品牌、渠道|方便面 + 饮料
+09633|农夫山泉|食品饮料|寡头|宽|品牌、水源地、渠道|包装饮用水 + 茶饮料
+00151|中国旺旺|食品饮料|竞争较激烈|窄|品牌|米果 + 乳饮
+06186|中国飞鹤|乳制品|寡头|窄|品牌、渠道|国产婴幼儿奶粉
+09987|百胜中国|餐饮|竞争较激烈|窄|规模、供应链、品牌|肯德基 + 必胜客（中国）
+06862|海底捞|餐饮|竞争较激烈|窄|品牌、服务|火锅
+02020|安踏体育|服饰|寡头|窄|多品牌、渠道|安踏 + FILA + 始祖鸟（亚玛芬）
+02331|李宁|服饰|寡头|窄|品牌|运动服饰
+02313|申洲国际|纺织制造|寡头|窄|规模、客户粘性|耐克/优衣库等面料成衣代工
+01929|周大福|珠宝|寡头|窄|品牌、渠道|黄金珠宝零售
+01913|普拉达|奢侈品|寡头|宽|品牌|Prada / Miu Miu
+00027|银河娱乐|博彩|寡头|宽|澳门博彩牌照（仅 6 张）|澳门综合度假村
+01928|金沙中国有限公司|博彩|寡头|宽|澳门博彩牌照|澳门综合度假村
+06690|海尔智家|家电|寡头|窄|品牌、渠道|白电（冰洗龙头）
+00992|联想集团|电脑|寡头|窄|规模、供应链|PC + 服务器
+02382|舜宇光学科技|光学|寡头|窄|规模、工艺|手机/车载镜头
+00522|ASMPT|半导体设备|寡头|窄|技术、客户认证|半导体封装设备
+00981|中芯国际|半导体|寡头|窄|规模、国产替代|晶圆代工
+06969|思摩尔国际|电子烟|寡头|窄|技术、专利、规模|雾化设备代工
+01099|国药控股|医药流通|寡头|窄|分销网络|药品分销（国内龙头）
+01093|石药集团|医药|竞争较激烈|窄|研发管线、渠道|仿制药 + 创新药
+02269|药明生物|医药外包|寡头|窄|规模、客户转换成本|生物药 CDMO
+03692|翰森制药|医药|竞争较激烈|窄|研发管线|创新药
+09901|新东方-S|教育|寡头|窄|品牌|留学考试培训 + 素质教育
+03888|金山软件|软件|寡头|窄|用户习惯、转换成本|WPS 办公 + 游戏
+`;
+const POOL = POOL_TEXT.trim().split('\n').map(l=>{ const [code,name,ind,struct,moat,moatSrc,core] = l.split('|'); return {code,name,ind,struct,moat,moatSrc,core}; });
+const STRUCT_SCORE = {'垄断/特许':1,'双寡头':0.85,'寡头':0.7,'竞争较激烈':0.4,'未评估':0.4};
+const MOAT_SCORE = {'宽':1,'窄':0.6,'未评估':0.3};
+</script>
+
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const num = x => { const n = parseFloat(x); return isFinite(n) ? n : null; };
+const clamp = (x,a=0,b=1) => Math.max(a, Math.min(b, x));
+const mean = a => { a = a.filter(x=>x!=null); return a.length ? a.reduce((s,x)=>s+x,0)/a.length : null; };
+const std = a => { a = a.filter(x=>x!=null); if(a.length<2) return null; const m = mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isFin = o => /银行|保险|证券/.test(o.orgType||'') || /银行|保险|券商/.test(o.ind||'');
+
+// ---------- 权重 ----------
+const LF = [
+  {k:'hist', name:'自身历史估值分位', w:40},
+  {k:'gap', name:'杀估值不杀业绩', w:30},
+  {k:'pos', name:'52 周位置', w:15},
+  {k:'div', name:'股息率', w:15},
+];
+const weights = Object.assign(Object.fromEntries(LF.map(f=>[f.k,f.w])), store.get('hkq_w', {}));
+$('#weights').innerHTML = LF.map(f=>`<div><div class="row" style="justify-content:space-between"><label>${f.name}</label><label id="wv_${f.k}">${weights[f.k]}</label></div><input type="range" min="0" max="60" value="${weights[f.k]}" data-k="${f.k}"></div>`).join('');
+$('#weights').addEventListener('input', e=>{
+  const k = e.target.dataset.k; if(!k) return;
+  weights[k] = +e.target.value; $('#wv_'+k).textContent = weights[k];
+  store.set('hkq_w', weights); scoreAll(); render();
+});
+
+// ---------- 网络 ----------
+let seq = 0;
+function loadScript(url, opt={}){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    if(opt.charset) s.charset = opt.charset;
+    const t = setTimeout(()=>{ s.remove(); reject(new Error('超时')); }, opt.timeout||15000);
+    s.onload = ()=>{ clearTimeout(t); s.remove(); resolve(); };
+    s.onerror = ()=>{ clearTimeout(t); s.remove(); reject(new Error('网络错误')); };
+    s.src = url; document.head.appendChild(s);
+  });
+}
+function jsonp(url, param='callback', timeout=15000){
+  return new Promise((resolve, reject)=>{
+    const cb = '__jp' + (++seq) + '_' + Date.now();
+    let done = false;
+    window[cb] = d => { done = true; resolve(d); };
+    loadScript(url + (url.includes('?')?'&':'?') + param + '=' + cb, {timeout})
+      .then(()=>{ if(!done) reject(new Error('无数据')); })
+      .catch(reject)
+      .finally(()=>{ setTimeout(()=>{ delete window[cb]; }, 0); });
+  });
+}
+async function pmap(list, n, fn){
+  const out = new Array(list.length); let i = 0;
+  await Promise.all(Array.from({length:Math.min(n, list.length)}, async ()=>{
+    while(i < list.length){ const k = i++; try{ out[k] = await fn(list[k], k); }catch(e){ out[k] = null; } }
+  }));
+  return out;
+}
+function setStatus(h){ $('#status').innerHTML = h; }
+function setProg(p){ $('#prog').style.width = (p*100).toFixed(0)+'%'; }
+
+// ---------- 数据：实时行情（腾讯） ----------
+async function loadQuotes(codes){
+  const res = {};
+  for(let i=0;i<codes.length;i+=60){
+    const part = codes.slice(i,i+60);
+    try{ await loadScript('https://qt.gtimg.cn/q=' + part.map(c=>'r_hk'+c).join(',') + '&_=' + Date.now(), {charset:'gbk'}); }catch(e){ continue; }
+    for(const c of part){
+      const v = window['v_r_hk'+c];
+      if(typeof v !== 'string' || v.length < 20) continue;
+      const a = v.split('~');
+      res[c] = { qname:a[1], price:num(a[3]), pct:num(a[32]), pe:num(a[39]), cap:num(a[45]), dy:num(a[47]),
+        hi52:num(a[48]), lo52:num(a[49]), pb:num(a[58]), ytd:num(a[61]), time:a[30] };
+      window['v_r_hk'+c] = undefined;
+    }
+  }
+  return res;
+}
+
+// ---------- 数据：财报（东方财富 F10） ----------
+const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
+async function loadFin(codes){
+  const groups = []; for(let i=0;i<codes.length;i+=8) groups.push(codes.slice(i,i+8));
+  const out = {}; let done = 0;
+  await pmap(groups, 3, async g=>{
+    const f = `(SECUCODE in (${g.map(c=>`"${c}.HK"`).join(',')}))(STD_REPORT_DATE>='2018-06-30')`;
+    const url = `https://datacenter.eastmoney.com/securities/api/data/v1/get?reportName=RPT_HKF10_FN_MAININDICATOR&columns=${FIN_COLS}&filter=${encodeURIComponent(f)}&pageNumber=1&pageSize=500&sortTypes=1&sortColumns=STD_REPORT_DATE&source=F10&client=PC`;
+    let d = null;
+    for(let t=0;t<2 && !d;t++){ try{ d = await jsonp(url); }catch(e){} }
+    (d && d.result && d.result.data || []).forEach(r=>{ (out[r.SECURITY_CODE] ||= []).push(r); });
+    done++; setStatus(`读取财报 ${done}/${groups.length}…`); setProg(0.1 + 0.4*done/groups.length);
+  });
+  return out;
+}
+
+// ---------- 数据：月 K 线（腾讯，前复权） ----------
+async function loadKline(codes){
+  const out = {}; let done = 0;
+  await pmap(codes, 6, async c=>{
+    const v = 'kl_' + c + '_' + (++seq);
+    try{
+      await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/hkfqkline/get?_var=${v}&param=hk${c},month,,,84,qfq`);
+      const d = window[v] && window[v].data && window[v].data['hk'+c];
+      const k = d && (d.qfqmonth || d.month);
+      if(k) out[c] = k.map(r=>[r[0], num(r[2])]).filter(r=>r[1]);
+    }finally{ window[v] = undefined; done++; if(done%5===0){ setStatus(`读取历史股价 ${done}/${codes.length}…`); setProg(0.5 + 0.4*done/codes.length); } }
+  });
+  return out;
+}
+
+// ---------- 状态 ----------
+let customCodes = store.get('hkq_custom', []);
+let FIN = {}, KL = {}, Q = {}, items = [], loading = false, timer = null;
+let sortKey = 'low', sortDir = -1, openCode = null;
+const stars = new Set(store.get('hkq_star', []));
+let prevFocus = new Set(store.get('hkq_prevfocus', [])), newFocus = new Set();
+
+function poolAll(){
+  const m = new Map(POOL.map(p=>[p.code,p]));
+  customCodes.forEach(c=>{ if(!m.has(c)) m.set(c, {code:c, name:'', ind:'自定义', struct:'未评估', moat:'未评估', moatSrc:'未评估（自定义加入）', core:'—', custom:true}); });
+  return [...m.values()];
+}
+
+async function loadSlow(force){
+  const pool = poolAll(), codes = pool.map(p=>p.code);
+  const cache = store.get('hkq_cache', null);
+  const fresh = cache && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
+  if(!force && fresh){ FIN = cache.fin; KL = cache.kl; return '缓存'; }
+  FIN = await loadFin(codes);
+  if(!Object.keys(FIN).length) throw new Error('东方财富财报接口无响应，无法做基本面体检（请稍后点「重拉财报」）');
+  KL = await loadKline(codes);
+  const miss = codes.filter(c=>!(c in FIN));
+  try{ store.set('hkq_cache', {t:Date.now(), fin:FIN, kl:KL, miss}); }catch(e){}
+  return '实时';
+}
+
+async function refresh(force=false){
+  if(loading) return; loading = true; $('#refresh').disabled = $('#reloadFin').disabled = true;
+  try{
+    setProg(0.05);
+    const src = await loadSlow(force);
+    setStatus('读取实时行情…'); setProg(0.92);
+    Q = await loadQuotes(poolAll().map(p=>p.code));
+    if(!Object.keys(Q).length) throw new Error('腾讯行情无响应');
+    build(); scoreAll(true); fillFilters(); render();
+    setProg(1); setTimeout(()=>setProg(0), 800);
+    const tq = Object.values(Q)[0]?.time || '';
+    setStatus(`行情 ${tq} · 财报${src === '缓存' ? '（24h 缓存）' : '（已更新）'} · 刷新于 ${new Date().toLocaleTimeString()}`);
+  }catch(e){
+    setStatus('<span class="err">加载失败：' + esc(e.message) + '</span>'); setProg(0);
+  }finally{ loading = false; $('#refresh').disabled = $('#reloadFin').disabled = false; }
+}
+
+// ---------- 第二层：质量分与体检 ----------
+function analyzeFin(p, rows){
+  const r = (rows||[]).map(x=>({...x, d:x.STD_REPORT_DATE.slice(0,10)})).sort((a,b)=>a.d<b.d?-1:1);
+  if(!r.length) return null;
+  // 拆股 / 合股校正：每股净资产相邻两期跳变超过 3 倍，视为股本变动，把更早的每股数据换算到当前股本
+  //（数据源有时只调整了每股净资产、没调整滚动 EPS，表现为 EPS 恰好跳变约 10 倍，也一并校正）
+  let fB = 1, fE = 1;
+  for(let i=r.length-1;i>=0;i--){
+    const b = num(r[i].BPS), e = num(r[i].EPS_TTM);
+    r[i].BPS = b!=null ? b*fB : null; r[i].EPS_TTM = e!=null ? e*fE : null;
+    if(i===0) break;
+    const ob = num(r[i-1].BPS), oe = num(r[i-1].EPS_TTM);
+    const kb = (b>0 && ob>0) ? b/ob : 1;
+    if(kb>3 || kb<1/3){ fB *= kb; fE *= kb; continue; }
+    if(e>0 && oe>0){ const lg = Math.log10(e/oe), rd = Math.round(lg); if(rd!==0 && Math.abs(lg-rd)<0.08) fE *= Math.pow(10, rd); }
+  }
+  const annual = r.filter(x=>x.DATE_TYPE_CODE==='001');
+  const last = r[r.length-1], prev = r[r.length-2];
+  const a5 = annual.slice(-5);
+  // 截断极端值（如净资产为负时 ROE 会失真）
+  const roeA = a5.map(x=>num(x.ROE_AVG)).map(x=>x==null?null:clamp(x,-30,60));
+  const roeAvg = mean(roeA), roeMin = roeA.length ? Math.min(...roeA.filter(x=>x!=null)) : null;
+  const gm = annual.slice(-5).map(x=>num(x.GROSS_PROFIT_RATIO)).filter(x=>x!=null);
+  const gm3 = mean(annual.slice(-3).map(x=>num(x.GROSS_PROFIT_RATIO)));
+  const revYoys = a5.map(x=>num(x.OPERATE_INCOME_YOY)).filter(x=>x!=null);
+  const cfo = annual.slice(-3).map(x=>{ const c=num(x.NETCASH_OPERATE), n=num(x.HOLDER_PROFIT); return (c!=null && n>0) ? c/n : null; });
+  const fin = isFin({orgType:last.ORG_TYPE, ind:p.ind});
+  const epsNow = num(last.EPS_TTM);
+  const yrAgo = (()=>{ const t = new Date(last.d); t.setFullYear(t.getFullYear()-1); const s = t.toISOString().slice(0,10); return [...r].reverse().find(x=>x.d<=s); })();
+  const epsYrAgo = yrAgo ? num(yrAgo.EPS_TTM) : null;
+  const epsChg = (epsNow!=null && epsYrAgo>0) ? (epsNow/epsYrAgo-1)*100 : null;
+  const dar = num(last.DEBT_ASSET_RATIO);
+  const dar3 = (()=>{ const t = new Date(last.d); t.setFullYear(t.getFullYear()-3); const s=t.toISOString().slice(0,10); const x=[...r].reverse().find(x=>x.d<=s); return x?num(x.DEBT_ASSET_RATIO):null; })();
+
+  // 质量分
+  const parts = [];
+  if(roeAvg!=null) parts.push([30, clamp((roeAvg-5)/17)]);
+  if(roeAvg>0 && roeMin!=null) parts.push([20, clamp((roeMin/roeAvg-0.4)/0.55)]);
+  if(revYoys.length>=3) parts.push([15, revYoys.filter(x=>x>0).length/revYoys.length]);
+  if(!fin && gm.length>=3) parts.push([15, clamp(1 - std(gm)/6)]);
+  else if(fin && roeAvg>0 && roeMin!=null) parts.push([15, clamp((roeMin/roeAvg-0.4)/0.55)]);
+  if(!fin && cfo.filter(x=>x!=null).length) parts.push([10, clamp((mean(cfo)-0.5)/0.7)]);
+  parts.push([10, (STRUCT_SCORE[p.struct]??0.4)*0.5 + (MOAT_SCORE[p.moat]??0.3)*0.5]);
+  const W = parts.reduce((s,x)=>s+x[0],0);
+  const quality = parts.reduce((s,x)=>s+x[0]*x[1],0)/W*100;
+
+  // 体检
+  const hard = [], soft = [];
+  const roeY = num(last.ROE_YEARLY) ?? num(last.ROE_AVG);
+  const profYoy = num(last.HOLDER_PROFIT_YOY), revYoy = num(last.OPERATE_INCOME_YOY), revYoyPrev = prev ? num(prev.OPERATE_INCOME_YOY) : null;
+  if(epsNow!=null && epsNow<=0) hard.push('滚动利润为负（亏损）');
+  if(profYoy!=null && profYoy < -20) hard.push(`最新期净利同比 ${profYoy.toFixed(0)}%`);
+  if(revYoy!=null && revYoyPrev!=null && revYoy<0 && revYoyPrev<0) soft.push(`营收连续两期下滑（${revYoyPrev.toFixed(0)}% → ${revYoy.toFixed(0)}%）`);
+  if(roeY!=null && roeAvg>0 && roeY < roeAvg*0.75) soft.push(`ROE ${roeY.toFixed(1)}% 低于5年均值 ${roeAvg.toFixed(1)}%`);
+  const gmNow = num(last.GROSS_PROFIT_RATIO);
+  if(!fin && gmNow!=null && gm3!=null && gmNow < gm3-3) soft.push(`毛利率 ${gmNow.toFixed(1)}% 低于3年均值 ${gm3.toFixed(1)}%`);
+  if(epsChg!=null && epsChg < -10) soft.push(`滚动EPS同比 ${epsChg.toFixed(0)}%`);
+  if(!fin && dar!=null && dar3!=null && dar-dar3 > 10) soft.push(`负债率3年上升 ${(dar-dar3).toFixed(0)}pct`);
+  const verdict = hard.length || soft.length>=2 ? 'fail' : soft.length ? 'watch' : 'pass';
+
+  return { rows:r, annual, last, fin, roeAvg, roeMin, roeY, gm3, gmNow, revYoy, profYoy, epsNow, epsChg, quality,
+    hard, soft, verdict, reportType:last.REPORT_TYPE, orgType:last.ORG_TYPE };
+}
+
+// 用财报 EPS_TTM / BPS 与月度股价重建过去 5 年的 PE / PB
+function histValuation(f, kl, q){
+  if(!f || !kl || kl.length<24 || !q || !q.price) return null;
+  const usePB = f.fin;
+  const field = usePB ? 'BPS' : 'EPS_TTM';
+  const rep = f.rows.filter(x=>num(x[field])>0).map(x=>{ const t=new Date(x.d); t.setDate(t.getDate()+75); return [t.toISOString().slice(0,10), num(x[field])]; });
+  if(!rep.length) return null;
+  const nowVal = usePB ? q.pb : q.pe;
+  const lastBase = rep[rep.length-1][1];
+  if(!(nowVal>0) || !lastBase) return null;
+  const fx = nowVal / (q.price / lastBase); // 消除报表币种与港元差异
+  const series = [];
+  for(const [d, close] of kl.slice(-60)){
+    let base = null; for(const [rd, v] of rep){ if(rd<=d) base = v; else break; }
+    if(base>0) series.push([d, close/base*fx]);
+  }
+  if(series.length<24) return null;
+  const vals = series.map(x=>x[1]).sort((a,b)=>a-b);
+  const pct = vals.filter(v=>v<nowVal).length / vals.length;
+  const p1y = kl.length>=13 ? kl[kl.length-13][1] : null;
+  const priceChg = p1y ? (q.price/p1y-1)*100 : null;
+  return { metric: usePB?'PB':'PE', now:nowVal, pct, series, min:vals[0], max:vals[vals.length-1], med:vals[vals.length>>1], priceChg };
+}
+
+function build(){
+  items = poolAll().map(p=>{
+    const q = Q[p.code] || null;
+    const f = analyzeFin(p, FIN[p.code]);
+    const h = f ? histValuation(f, KL[p.code], q) : null;
+    const name = p.name || q?.qname || p.code;
+    const pos52 = (q && q.hi52 > q.lo52) ? clamp((q.price-q.lo52)/(q.hi52-q.lo52)) : null;
+    const gap = (f && h && f.epsChg!=null && h.priceChg!=null) ? f.epsChg - h.priceChg : null;
+    return {...p, name, q, f, h, pos52, gap, price:q?.price, pct:q?.pct, dy:q?.dy, pe:q?.pe, pb:q?.pb,
+      quality:f?.quality ?? null, verdict:f?.verdict ?? 'nodata', histPct:h?.pct ?? null};
+  });
+}
+
+// ---------- 第三层：低预期分 ----------
+function scoreAll(fromRefresh){
+  items.forEach(it=>{
+    const fct = {
+      hist: it.histPct!=null ? 1-it.histPct : null,
+      gap: it.gap!=null ? clamp((it.gap+10)/60) : null,
+      pos: it.pos52!=null ? 1-it.pos52 : null,
+      div: it.dy!=null ? clamp(it.dy/7) : null,
+    };
+    let s=0, w=0, W=0;
+    LF.forEach(x=>{ W += weights[x.k]; if(fct[x.k]!=null){ s += fct[x.k]*weights[x.k]; w += weights[x.k]; } });
+    it.fct = fct;
+    it.low = (w && W) ? s/w*100*(0.75+0.25*w/W) : null;
+    it.focus = it.verdict!=='fail' && it.verdict!=='nodata' && it.quality>=60 && it.low>=65;
+  });
+  if(fromRefresh){
+    const cur = items.filter(x=>x.focus).map(x=>x.code);
+    newFocus = prevFocus.size ? new Set(cur.filter(c=>!prevFocus.has(c))) : new Set();
+    prevFocus = new Set(cur); store.set('hkq_prevfocus', cur);
+  }
+}
+
+// ---------- 渲染 ----------
+const COLS = [
+  {k:'star',t:'',l:1,ns:1},{k:'code',t:'代码',l:1},{k:'name',t:'名称',l:1},{k:'ind',t:'行业',l:1},
+  {k:'struct',t:'格局',l:1},{k:'moat',t:'护城河',l:1},
+  {k:'quality',t:'质量分'},{k:'low',t:'低预期分'},
+  {k:'price',t:'现价'},{k:'pct',t:'今日%'},{k:'val',t:'PE/PB'},{k:'histPct',t:'5年估值分位'},
+  {k:'epsChg',t:'1年EPS%'},{k:'priceChg',t:'1年股价%'},{k:'pos52',t:'52周位置'},{k:'dy',t:'股息率%'},
+  {k:'roeAvg',t:'5年均ROE'},{k:'verdict',t:'体检',l:1},
+];
+const sortVal = (it,k) => ({epsChg:it.f?.epsChg, priceChg:it.h?.priceChg, roeAvg:it.f?.roeAvg, val:it.h?.now ?? it.pe,
+  moat:MOAT_SCORE[it.moat], struct:STRUCT_SCORE[it.struct], verdict:{pass:2,watch:1}[it.verdict]??0}[k] ?? it[k]);
+function renderHead(){
+  $('#thead').innerHTML = COLS.map(c=>`<th class="${c.l?'l':''}" data-k="${c.ns?'':c.k}">${c.t}${sortKey===c.k?(sortDir<0?' ↓':' ↑'):''}</th>`).join('');
+}
+$('#thead').addEventListener('click', e=>{
+  const k = e.target.closest('th')?.dataset.k; if(!k) return;
+  if(sortKey===k) sortDir=-sortDir; else { sortKey=k; sortDir=/^(code|name|ind)$/.test(k)?1:-1; }
+  render();
+});
+const f2 = (v,d=2) => v==null ? '<span class="status">-</span>' : v.toFixed(d);
+const sg = (v,d=1) => v==null ? '<span class="status">-</span>' : `<span class="${v>0?'up':v<0?'down':''}">${v>0?'+':''}${v.toFixed(d)}</span>`;
+const scoreBar = (v, color) => v==null ? '<span class="status">-</span>' : `<span class="bar" style="width:${Math.round(v*0.5)}px;background:${color}"></span><b>${v.toFixed(0)}</b>`;
+
+function passFilter(it){
+  const m = $('#fMoat').value, s = $('#fStruct').value, ind = $('#fInd').value, q = $('#q').value.trim().toLowerCase();
+  if(m && it.moat!==m) return false;
+  if(s && it.struct!==s) return false;
+  if(ind && it.ind!==ind) return false;
+  if(q && !(it.code.includes(q) || (it.name||'').toLowerCase().includes(q))) return false;
+  if($('#onlyStar').checked && !stars.has(it.code)) return false;
+  return true;
+}
+function render(){
+  renderHead(); renderFunnel();
+  const showWatch = $('#showWatch').checked;
+  const list = items.filter(it=>passFilter(it) && (it.verdict==='pass' || (showWatch && it.verdict==='watch')));
+  list.sort((a,b)=>{ const x=sortVal(a,sortKey), y=sortVal(b,sortKey);
+    if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1;
+    return (typeof x==='string' ? x.localeCompare(y,'zh') : x-y)*sortDir; });
+  $('#count').textContent = `${list.length} 只通过体检 · 点击行展开详情`;
+  $('#tbody').innerHTML = list.length ? list.map(rowHtml).join('') : `<tr><td colspan="${COLS.length}" class="l status">${items.length?'没有符合条件的股票':'加载中…'}</td></tr>`;
+  $('#cards').innerHTML = list.length ? list.map(cardHtml).join('') : `<div class="status">${items.length?'没有符合条件的股票':'加载中…'}</div>`;
+  const fails = items.filter(it=>passFilter(it) && it.verdict==='fail').sort((a,b)=>b.f.hard.length-a.f.hard.length);
+  const nod = items.filter(it=>passFilter(it) && it.verdict==='nodata');
+  $('#failCards').innerHTML = fails.map(it=>`<div class="card"><div class="ch"><div><span class="nm">${esc(it.name)}</span> <span class="status">${it.code} · ${esc(it.ind)}</span></div><span class="moat-${it.moat}">${it.moat}</span></div>
+    <div class="metrics" style="margin:8px 0"><div><span class="l">营收同比</span>${sg(it.f.revYoy)}%</div><div><span class="l">净利同比</span>${sg(it.f.profYoy)}%</div><div><span class="l">ROE(年化)</span>${f2(it.f.roeY,1)}</div></div>
+    <div>${it.f.hard.map(x=>`<span class="tag bad">${esc(x)}</span>`).join('')}${it.f.soft.map(x=>`<span class="tag w">${esc(x)}</span>`).join('')}</div>
+    <div class="status">${esc(it.f.reportType)}</div></div>`).join('')
+    + nod.map(it=>`<div class="card"><b>${esc(it.name)}</b> <span class="status">${it.code} · 未取到财报数据</span></div>`).join('')
+    || '<div class="status">没有被排除的公司</div>';
+  $('#failBody').innerHTML = fails.map(it=>`<tr><td class="l">${it.code}</td><td class="l">${esc(it.name)}</td><td class="l status">${esc(it.ind)}</td><td class="l moat-${it.moat}">${it.moat}</td>
+    <td>${f2(it.price)}</td><td>${f2(it.pe,1)}</td><td>${sg(it.f.revYoy)}</td><td>${sg(it.f.profYoy)}</td><td>${f2(it.f.roeY,1)}</td>
+    <td class="l" style="white-space:normal">${it.f.hard.map(x=>`<span class="tag bad">${esc(x)}</span>`).join('')}${it.f.soft.map(x=>`<span class="tag w">${esc(x)}</span>`).join('')} <span class="status">${esc(it.f.reportType)}</span></td></tr>`).join('')
+    + nod.map(it=>`<tr><td class="l">${it.code}</td><td class="l">${esc(it.name)}</td><td class="l status">${esc(it.ind)}</td><td class="l">${it.moat}</td><td>${f2(it.price)}</td><td colspan="5" class="l status">未取到财报数据（可能已退市/私有化或接口暂不可用）</td></tr>`).join('')
+    || '<tr><td colspan="10" class="l status">没有被排除的公司</td></tr>';
+}
+function rowHtml(it){
+  const open = openCode===it.code;
+  const v = it.verdict==='pass' ? '<span class="tag ok">✓ 通过</span>' : `<span class="tag w" title="${esc(it.f.soft.join('；'))}">⚠ 需留意</span>`;
+  return `<tr class="main" data-c="${it.code}">
+    <td class="l"><span class="star ${stars.has(it.code)?'on':''}" data-s="${it.code}">${stars.has(it.code)?'★':'☆'}</span></td>
+    <td class="l">${it.code}</td>
+    <td class="l"><b>${esc(it.name)}</b> ${it.focus?'<span class="tag hot">重点关注</span>':''}${newFocus.has(it.code)?'<span class="tag hot">新</span>':''}</td>
+    <td class="l status">${esc(it.ind)}</td>
+    <td class="l">${it.struct}</td>
+    <td class="l moat-${it.moat}">${it.moat}</td>
+    <td>${scoreBar(it.quality,'var(--good)')}</td>
+    <td title="${LF.map(f=>f.name+': '+(it.fct[f.k]==null?'无数据':(it.fct[f.k]*100).toFixed(0))).join('\n')}">${scoreBar(it.low,'var(--accent)')}</td>
+    <td>${f2(it.price, it.price<10?3:2)}</td>
+    <td>${sg(it.pct,2)}</td>
+    <td>${it.h? `${it.h.now.toFixed(it.h.metric==='PB'?2:1)} <span class="status">${it.h.metric}</span>` : f2(it.pe,1)}</td>
+    <td>${it.histPct==null?'<span class="status">-</span>':`<span class="pos"><i style="left:calc(${(it.histPct*100).toFixed(0)}% - 2px)"></i></span> ${(it.histPct*100).toFixed(0)}%`}</td>
+    <td>${sg(it.f?.epsChg)}</td>
+    <td>${sg(it.h?.priceChg)}</td>
+    <td>${it.pos52==null?'<span class="status">-</span>':(it.pos52*100).toFixed(0)+'%'}</td>
+    <td>${f2(it.dy,1)}</td>
+    <td>${f2(it.f?.roeAvg,1)}</td>
+    <td class="l">${v}</td>
+  </tr>${open?`<tr class="detail"><td colspan="${COLS.length}">${detailHtml(it)}</td></tr>`:''}`;
+}
+function cardHtml(it){
+  const open = openCode===it.code;
+  const v = it.verdict==='pass' ? '<span class="tag ok">✓ 通过</span>' : '<span class="tag w">⚠ 需留意</span>';
+  return `<div class="card" data-c="${it.code}">
+    <div class="ch">
+      <div><span class="star ${stars.has(it.code)?'on':''}" data-s="${it.code}" style="font-size:18px;padding-right:4px">${stars.has(it.code)?'★':'☆'}</span><span class="nm">${esc(it.name)}</span> <span class="status">${it.code}</span></div>
+      <div style="text-align:right"><b>${f2(it.price, it.price<10?3:2)}</b><div style="font-size:12px">${sg(it.pct,2)}%</div></div>
+    </div>
+    <div class="tags">${it.focus?'<span class="tag hot">重点关注</span>':''}${newFocus.has(it.code)?'<span class="tag hot">新</span>':''}<span class="tag moat-${it.moat}">护城河 ${it.moat}</span><span class="tag">${esc(it.struct)}</span><span class="tag">${esc(it.ind)}</span>${v}</div>
+    <div class="scores">
+      <div><span class="l">质量分</span>${scoreBar(it.quality,'var(--good)')}</div>
+      <div><span class="l">低预期分</span>${scoreBar(it.low,'var(--accent)')}</div>
+    </div>
+    <div class="metrics">
+      <div><span class="l">${it.h?.metric||'PE'}</span>${it.h? it.h.now.toFixed(it.h.metric==='PB'?2:1) : f2(it.pe,1)}</div>
+      <div><span class="l">5年估值分位</span>${it.histPct==null?'-':(it.histPct*100).toFixed(0)+'%'}</div>
+      <div><span class="l">股息率</span>${f2(it.dy,1)}%</div>
+      <div><span class="l">1年EPS</span>${sg(it.f?.epsChg,0)}%</div>
+      <div><span class="l">1年股价</span>${sg(it.h?.priceChg,0)}%</div>
+      <div><span class="l">5年均ROE</span>${f2(it.f?.roeAvg,1)}%</div>
+    </div>
+    ${open ? `<div class="cd">${detailHtml(it)}</div>` : '<div class="more">点击查看生意与估值详情 ▾</div>'}
+  </div>`;
+}
+function spark(points, opt={}){
+  if(!points || points.length<2) return '<div class="status">数据不足</div>';
+  const W=300, H=70, pad=14, xs=points.map((_,i)=>i), ys=points.map(p=>p[1]);
+  let lo=Math.min(...ys), hi=Math.max(...ys); if(opt.zero) lo=Math.min(0,lo); if(hi===lo) hi=lo+1;
+  const X=i=>pad+(W-2*pad)*i/(points.length-1), Y=v=>H-pad-(H-2*pad)*(v-lo)/(hi-lo);
+  const path = points.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join('');
+  const last = points[points.length-1];
+  const ref = opt.ref!=null ? `<line x1="${pad}" x2="${W-pad}" y1="${Y(opt.ref)}" y2="${Y(opt.ref)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1"/>` : '';
+  const bars = opt.bars ? points.map((p,i)=>`<rect x="${X(i)-6}" y="${Math.min(Y(p[1]),Y(Math.max(lo,0)))}" width="12" height="${Math.abs(Y(p[1])-Y(Math.max(lo,0)))}" fill="var(--good)" opacity=".75"/><text x="${X(i)}" y="${H-2}" text-anchor="middle">${p[0]}</text>`).join('') : '';
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${ref}${opt.bars?bars:`<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.6"/><circle cx="${X(points.length-1)}" cy="${Y(last[1])}" r="3" fill="var(--up)"/><text x="${pad}" y="10">${opt.label||''}</text>`}</svg>`;
+}
+function detailHtml(it){
+  const f = it.f, h = it.h;
+  const roeSeries = f ? f.annual.slice(-7).map(x=>[x.d.slice(2,4), num(x.ROE_AVG)]).filter(x=>x[1]!=null) : [];
+  return `<div class="dgrid">
+    <div class="kv">
+      <h3>生意</h3>
+      <div><b>核心业务</b>${esc(it.core)}</div>
+      <div><b>行业格局</b>${esc(it.struct)}</div>
+      <div><b>护城河</b><span class="moat-${it.moat}">${esc(it.moat)}</span> · ${esc(it.moatSrc)}</div>
+      <div><b>市值</b>${it.q?.cap? it.q.cap.toFixed(0)+' 亿港元':'-'}</div>
+      <div><b>最新财报</b>${esc(f?.reportType||'-')}</div>
+    </div>
+    <div class="kv">
+      <h3>基本面体检</h3>
+      <div><b>营收同比</b>${sg(f?.revYoy)}%　<b style="min-width:auto">净利同比</b> ${sg(f?.profYoy)}%</div>
+      <div><b>ROE 年化</b>${f2(f?.roeY,1)}%（5年均 ${f2(f?.roeAvg,1)}%，最低 ${f2(f?.roeMin,1)}%）</div>
+      ${f && !f.fin ? `<div><b>毛利率</b>${f2(f.gmNow,1)}%（3年均 ${f2(f.gm3,1)}%）</div>`:''}
+      <div><b>预警</b>${f && (f.soft.length||f.hard.length) ? f.hard.concat(f.soft).map(x=>`<span class="tag w">${esc(x)}</span>`).join('') : '<span class="tag ok">无</span>'}</div>
+      <div style="margin-top:6px"><b>年度 ROE</b></div>${spark(roeSeries,{bars:1,zero:1})}
+    </div>
+    <div class="kv">
+      <h3>预期（估值）</h3>
+      ${h ? `<div><b>当前 ${h.metric}</b>${h.now.toFixed(2)}，5 年区间 ${h.min.toFixed(1)} – ${h.max.toFixed(1)}，中位 ${h.med.toFixed(1)}</div>
+      <div><b>历史分位</b>${(h.pct*100).toFixed(0)}%（越低说明市场越悲观）</div>
+      <div><b>杀估值幅度</b>EPS ${sg(f?.epsChg)}% vs 股价 ${sg(h.priceChg)}% → ${sg(it.gap)} 个百分点</div>
+      ${spark(h.series,{ref:h.med,label:'过去 5 年 '+h.metric+'（虚线=中位数）'})}` : '<div class="status">历史估值数据不足</div>'}
+      <div style="margin-top:4px"><a href="https://quote.eastmoney.com/hk/${it.code}.html" target="_blank" rel="noopener" style="color:var(--accent)">东方财富行情 ↗</a></div>
+    </div>
+  </div>`;
+}
+$('#tbody').addEventListener('click', e=>{
+  const s = e.target.dataset.s;
+  if(s){ stars.has(s)?stars.delete(s):stars.add(s); store.set('hkq_star',[...stars]); render(); return; }
+  const tr = e.target.closest('tr.main'); if(!tr) return;
+  openCode = openCode===tr.dataset.c ? null : tr.dataset.c; render();
+});
+$('#cards').addEventListener('click', e=>{
+  const s = e.target.dataset.s;
+  if(s){ stars.has(s)?stars.delete(s):stars.add(s); store.set('hkq_star',[...stars]); render(); return; }
+  if(e.target.closest('a')) return;
+  const card = e.target.closest('.card'); if(!card) return;
+  if(e.target.closest('.cd') && !e.target.closest('h3')) return; // 详情区域内点击不收起
+  const wasOpen = openCode===card.dataset.c;
+  openCode = wasOpen ? null : card.dataset.c; render();
+  if(!wasOpen){ const el = document.querySelector(`#cards .card[data-c="${openCode}"]`); el && el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+});
+$('#mSort').addEventListener('change', e=>{ const [k,d] = e.target.value.split(':'); sortKey = k; sortDir = +d; render(); });
+if(window.matchMedia('(max-width:767px)').matches) $('#filters').removeAttribute('open');
+function renderFunnel(){
+  const total = items.length, withData = items.filter(x=>x.verdict!=='nodata').length;
+  const pass = items.filter(x=>x.verdict==='pass').length, watch = items.filter(x=>x.verdict==='watch').length;
+  const fail = items.filter(x=>x.verdict==='fail').length, focus = items.filter(x=>x.focus).length;
+  const wide = items.filter(x=>x.moat==='宽').length;
+  const s = [
+    ['① 好生意池', total||'-', `人工评估格局 + 护城河，其中宽护城河 ${wide} 家`],
+    ['② 通过基本面体检', total?pass+watch:'-', total?`排除恶化 ${fail} 家 · ${watch} 家需留意 · ${total-withData} 家无数据`:'近 7 年财报自动检查'],
+    ['③ 重点关注', total?focus:'-', '质量分 ≥ 60 且 低预期分 ≥ 65'],
+  ];
+  $('#funnel').innerHTML = s.map(([t,n,d])=>`<div class="step"><div class="t">${t}</div><div class="n">${n}</div><div class="d">${d}</div></div>`).join('');
+}
+function fillFilters(){
+  const fill = (sel, vals) => { const cur = $(sel).value; $(sel).innerHTML = '<option value="">全部</option>' + vals.map(v=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`).join(''); };
+  fill('#fStruct', Object.keys(STRUCT_SCORE).filter(k=>items.some(x=>x.struct===k)));
+  fill('#fInd', [...new Set(items.map(x=>x.ind))].sort((a,b)=>a.localeCompare(b,'zh')));
+}
+function switchTab(t){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
+  ['pass','fail','method'].forEach(x=>$('#tab-'+x).style.display = x===t?'':'none');
+}
+$('#tabs').addEventListener('click', e=>{ if(e.target.dataset.tab) switchTab(e.target.dataset.tab); });
+['#fMoat','#fStruct','#fInd','#showWatch','#onlyStar'].forEach(s=>$(s).addEventListener('change', render));
+$('#q').addEventListener('input', render);
+
+// 自定义股票
+function renderAdd(){ $('#addList').innerHTML = customCodes.map(c=>`<span class="tag">${c}</span>`).join(''); }
+$('#addBtn').addEventListener('click', ()=>{
+  const add = $('#addCode').value.split(/[\s,，]+/).map(s=>s.replace(/\D/g,'')).filter(Boolean).map(s=>s.padStart(5,'0').slice(-5));
+  customCodes = [...new Set(customCodes.concat(add))]; store.set('hkq_custom', customCodes); $('#addCode').value=''; renderAdd(); refresh(false);
+});
+$('#clearAdd').addEventListener('click', ()=>{ customCodes=[]; store.set('hkq_custom', []); renderAdd(); refresh(false); });
+renderAdd();
+
+$('#refresh').addEventListener('click', ()=>refresh(false));
+$('#reloadFin').addEventListener('click', ()=>refresh(true));
+function setAuto(){ clearInterval(timer); if($('#auto').checked) timer = setInterval(()=>refresh(false), +$('#interval').value*1000); store.set('hkq_auto', $('#auto').checked); }
+$('#auto').checked = store.get('hkq_auto', false);
+$('#auto').addEventListener('change', setAuto); $('#interval').addEventListener('change', setAuto);
+
+$('#csv').addEventListener('click', ()=>{
+  const head = ['代码','名称','行业','格局','护城河','护城河来源','质量分','低预期分','现价','估值指标','当前估值','5年估值分位%','1年EPS%','1年股价%','52周位置%','股息率%','5年均ROE','体检','预警'];
+  const L = items.filter(x=>x.verdict!=='nodata').map(it=>[it.code,it.name,it.ind,it.struct,it.moat,it.moatSrc,it.quality?.toFixed(0),it.low?.toFixed(0),it.price,it.h?.metric,it.h?.now?.toFixed(2),it.histPct!=null?(it.histPct*100).toFixed(0):'',it.f?.epsChg?.toFixed(1),it.h?.priceChg?.toFixed(1),it.pos52!=null?(it.pos52*100).toFixed(0):'',it.dy,it.f?.roeAvg?.toFixed(1),{pass:'通过',watch:'需留意',fail:'排除'}[it.verdict],it.f?.hard.concat(it.f.soft).join('；')]);
+  const csv = [head].concat(L).map(r=>r.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download = `港股优质低预期_${new Date().toISOString().slice(0,10)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+});
+
+renderHead(); renderFunnel(); setAuto(); refresh(false);
+})();
+</script>
+</body>
+</html>
