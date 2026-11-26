@@ -58,6 +58,7 @@ tr.detail td{background:var(--bg);white-space:normal;text-align:left}
 .tag.hot{background:var(--accent);color:#fff}
 .moat-宽{color:var(--good);font-weight:600}
 .moat-窄{color:var(--text)}
+.moat-无{color:var(--muted)}
 .bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px}
 .pos{position:relative;display:inline-block;width:60px;height:6px;background:var(--chip);border-radius:3px;vertical-align:middle}
 .pos i{position:absolute;top:-3px;width:4px;height:12px;border-radius:2px;background:var(--accent)}
@@ -139,7 +140,7 @@ html{-webkit-text-size-adjust:100%}
   <details class="panel" id="filters" open>
     <summary class="status" style="cursor:pointer">筛选：护城河 / 格局 / 行业 / 搜索</summary>
     <div class="grid" style="margin-top:8px">
-      <div><label>护城河</label><select id="fMoat"><option value="">宽 + 窄</option><option value="宽">只看宽护城河</option></select></div>
+      <div><label>护城河</label><select id="fMoat"><option value="">全部</option><option value="宽">只看宽护城河</option><option value="宽窄">宽 + 窄（排除无护城河）</option></select></div>
       <div><label>行业格局</label><select id="fStruct"><option value="">全部</option></select></div>
       <div><label>行业</label><select id="fInd"><option value="">全部</option></select></div>
       <div><label>搜索代码 / 名称</label><input type="search" id="q" placeholder="如 00700 或 腾讯"></div>
@@ -167,8 +168,8 @@ html{-webkit-text-size-adjust:100%}
             <option value="low:-1">按 低预期分</option>
             <option value="quality:-1">按 质量分</option>
             <option value="histPct:1">按 估值分位（低→高）</option>
-            <option value="gap:-1">按 杀估值幅度</option>
-            <option value="dy:-1">按 股息率</option>
+            <option value="yld:-1">按 FCF/股东回报收益率</option>
+            <option value="impG:1">按 隐含增长（低→高）</option>
             <option value="pct:-1">按 今日涨幅</option>
           </select>
           <button id="csv">导出 CSV</button>
@@ -192,12 +193,18 @@ html{-webkit-text-size-adjust:100%}
 
     <div id="tab-method" style="display:none" class="note">
       <h3 style="color:var(--text)">第一层：好生意（人工评估，可修改）</h3>
-      池子里的每家公司都标注了<b>行业格局</b>（垄断/特许经营 › 双寡头 › 寡头 › 竞争较激烈）、<b>护城河宽度</b>（宽 / 窄）和<b>护城河来源</b>（网络效应、品牌、牌照、规模成本、转换成本、资源等）。
-      格局恶劣、无护城河的行业（如价格战中的整车、光伏、地产开发）不进池。这部分是定性判断，请按你自己的认知增删——在本文件顶部的 <code>POOL</code> 数组里改，或在下面临时添加代码。
+      判断标准参考 <a href="https://github.com/doublebearoliver-cyber/fangwei-perspective" target="_blank" rel="noopener" style="color:var(--accent)">方伟投资推理框架</a>（非官方整理，MIT 许可）：<b>从「用户为什么付钱」一直追到「竞争后的稳态自由现金流」</b>。每家公司标注：
+      <b>业态</b>（平台互联网 / 消费品牌 / 制造 / 周期商品化 / 金融 / 公用特许…，决定看什么证据）、<b>格局</b>、<b>用户为什么付钱</b>、<b>护城河三问</b>——对手为何进不来？进来后为何赚不到？赚到后为何抢不走？——以及<b>最强反证</b>（最可能推翻判断的事实）。<br>
+      护城河分 <span class="moat-宽">宽</span> / 窄 / <span class="moat-无">无</span>：<b>成本优势、牌照、规模本身不等于护城河</b>，只有能保护「稳态超额利润」的结构才算。所以：煤、油、铝、金铜、水泥等商品化生意评为「无」（成本领先只帮助活下来）；电网、燃气、收费公路、铁塔等虽然对手进不来，但超额利润被监管或客户拿走，评为「窄」。「无」护城河的公司仍显示，但不会被标为「重点关注」。<br>
+      这层是定性判断，请按你的认知改——在本文件顶部的 <code>POOL_TEXT</code> 里改，或临时添加代码：
       <div class="row" style="margin:8px 0 14px"><input type="text" id="addCode" placeholder="输入港股代码，如 00700，多个用空格隔开" style="max-width:340px"><button id="addBtn">加入池子（仅做财务体检）</button><button id="clearAdd">清空自定义</button><span id="addList"></span></div>
 
       <h3 style="color:var(--text)">第二层：财务质量分 + 基本面体检（自动，基于近 7 年财报）</h3>
-      <b>质量分</b>（0–100）：5 年平均 ROE 水平（30%）、ROE 稳定性 = 5 年最低/平均（20%）、营收增长的连续性（15%）、毛利率稳定性（15%，金融股改用 ROE 稳定性）、经营现金流/净利润（10%，金融股不计）、格局+护城河人工评级（10%）。<br>
+      <b>质量分</b>（0–100），按框架「自由现金流是商业模式的终验」设计：
+      <b>利润→自由现金流转化</b>（近 3 年 FCF/净利润，25%；FCF = 经营现金流 − 购建固定资产与无形资产；近 5 年有 2 年以上 FCF 为负则减半）、
+      <b>稳态回报</b>（5 年平均 ROE，20%）、<b>竞争后利润还在不在</b>（5 年最低 ROE/平均，15%）、<b>定价权</b>（毛利率稳定性，10%）、
+      <b>资本轻重与稀释</b>（资本开支/经营现金流 + 5 年股本变化，10%）、<b>护城河三问</b>人工评级（20%）。
+      金融股不看 FCF，改看 ROE 水平与韧性、营收连续性、股本稀释。<br>
       <b>体检</b>：<span class="tag bad">硬伤</span> 任一即排除：滚动利润为负；<b>营业利润</b>连续两期同比 &lt; −20%（用营业利润而非净利润，剔除投资收益、资产出售等一次性项目；要求连续两期，过滤单季冲击）。注意：保险股的利润主要随资本市场波动，真正该看的新业务价值、内含价值本数据源没有，其结果需打折看待。
       <span class="tag w">预警</span> 两项及以上即排除，一项标为「需留意」：营收连续两期同比下滑；年化 ROE 低于 5 年均值的 75%；毛利率比 3 年均值低 3 个百分点以上；滚动 EPS 比一年前低 10% 以上；资产负债率比 3 年前上升 10 个百分点以上（非金融）。
 
@@ -205,104 +212,111 @@ html{-webkit-text-size-adjust:100%}
 
       <h3 style="color:var(--text);margin-top:14px">第三层：低预期分（实时，权重可调）</h3>
       <div class="grid" id="weights" style="margin:6px 0 8px"></div>
-      <b>自身历史估值分位</b>：当前 PE 在过去 5 年月度 PE 中的分位（银行/保险/券商用 PB），越低越高分——跟自己比，不跟别的行业比。<br>
-      <b>杀估值不杀业绩</b>：过去 12 个月滚动 EPS 变化 − 股价变化。业绩涨、股价跌，说明市场预期被压缩，差值越大越高分。<br>
-      <b>52 周位置</b>：股价越靠近一年内低点越高分。<b>股息率</b>：7% 及以上给满分。<br>
-      <b>重点关注</b> = 通过体检 + 质量分 ≥ 60 + 低预期分 ≥ 65。
+      按框架「把价格翻译成隐含的未来，再和企业真实可能的未来比较」：<br>
+      <b>价格隐含预期 vs 过去增长</b>：用永续增长模型反推，<code>隐含长期增长 = (要求回报 − 收益率) ÷ (1 + 收益率)</code>，要求回报取 9%；收益率用<b>正常化自由现金流 ÷ 市值</b>（近 3 年平均 FCF，周期股取 5 年；金融股用分红+回购）。再与 2018 年以来的营收复合增速（金融股用净利润，封顶 15%）比较，过去做到的明显高于价格要求的，得分高。周期股的「过去增长」按 0 处理，因为峰值利润不能外推。<br>
+      <b>正常化 FCF 收益率</b>：10% 及以上给满分。<b>自身历史估值分位</b>：当前 PE 在过去 5 年中的分位（金融股、周期股用 PB——周期股在利润高点 PE 最低，容易误判为便宜）。<br>
+      <b>杀估值不杀业绩</b>：过去 12 个月 EPS 变化 − 股价变化（周期股不计）。<b>52 周位置</b>：越靠近低点越高分。<br>
+      市值按 PB × 归母净资产换算成报表币种，与现金流数据币种自动对齐。<br>
+      <b>重点关注</b> = 通过体检 + 护城河不是「无」+ 质量分 ≥ 60 + 低预期分 ≥ 65。
     </div>
   </div>
 </main>
 
 <script>
 /* =====================================================================
-   第一层：优质公司池（人工定性评估，按需修改）
-   字段：代码 | 名称 | 行业 | 格局 | 护城河(宽/窄) | 护城河来源 | 核心业务
+   第一层：好生意池（人工定性评估，按需修改）
+   评估标准参考「方伟投资推理」框架（github.com/doublebearoliver-cyber/fangwei-perspective，MIT）：
+   从「用户为什么付钱」一直追到「竞争后的稳态自由现金流」；护城河看三问——
+   对手为何进不来？进来后为何赚不到？赚到后为何抢不走？成本优势、牌照、规模本身不自动等于护城河，
+   只有能保护「稳态超额利润」的结构才算；被监管或客户拿走超额利润的，护城河打折。
+   字段：代码|名称|行业|业态|格局|护城河(宽/窄/无)|护城河三问|用户为什么付钱|最强反证
+   业态：平台互联网 / 消费品牌 / 线下服务 / 制造 / 科技 / 周期商品化 / 金融 / 公用特许 / 医药
    ===================================================================== */
 const POOL_TEXT = `
-00700|腾讯控股|互联网|垄断/特许|宽|网络效应、转换成本|微信社交生态 + 游戏 + 广告 + 金融科技
-09988|阿里巴巴-W|互联网|寡头|窄|规模、网络效应|淘宝天猫电商 + 阿里云
-09999|网易-S|游戏|双寡头|窄|IP 与研发能力|自研网络游戏（与腾讯形成双寡头）
-09618|京东集团-SW|电商零售|寡头|窄|物流基础设施、规模成本|自营电商 + 京东物流
-01024|快手-W|互联网|双寡头|窄|网络效应|短视频与直播（与抖音双寡头）+ 广告电商
-09888|百度集团-SW|互联网|垄断/特许|窄|规模、数据|搜索广告 + 智能云
-09961|携程集团-S|在线旅游|垄断/特许|宽|网络效应、规模|在线酒店机票预订（国内 OTA 龙头）
-03690|美团-W|本地生活|寡头|窄|网络效应、地推与配送网络|外卖 + 到店酒旅
-02057|中通快递-W|快递物流|寡头|窄|规模成本|加盟制快递网络（成本领先）
-00941|中国移动|电信|寡头|宽|牌照、网络规模|移动通信 + 宽带（三家寡头之首）
-00728|中国电信|电信|寡头|窄|牌照、网络规模|固网宽带 + 移动 + 云
-00762|中国联通|电信|寡头|窄|牌照、网络规模|移动 + 宽带 + 产业互联网
-00788|中国铁塔|通信基础设施|垄断/特许|宽|垄断地位、站址资源|通信铁塔租赁
-00388|香港交易所|交易所|垄断/特许|宽|法定垄断、网络效应|香港证券/衍生品交易与结算
-03968|招商银行|银行|竞争较激烈|宽|零售客户与品牌|零售银行 + 财富管理
-01398|工商银行|银行|寡头|窄|低成本存款、规模|国有大行
-00939|建设银行|银行|寡头|窄|低成本存款、规模|国有大行（按揭强项）
-03988|中国银行|银行|寡头|窄|低成本存款、海外网络|国有大行（国际化）
-01288|农业银行|银行|寡头|窄|县域网络、低成本存款|国有大行（县域）
-00005|汇丰控股|银行|寡头|窄|全球网络、港元发钞|跨境银行与财富管理
-02388|中银香港|银行|寡头|窄|港元发钞行、规模|香港本地银行
-01299|友邦保险|保险|寡头|宽|代理人渠道、品牌|亚太寿险
-02318|中国平安|保险|寡头|窄|综合金融、渠道|寿险 + 财险 + 银行
-02628|中国人寿|保险|寡头|窄|渠道、规模|国内寿险龙头
-02328|中国财险|保险|寡头|宽|规模、定价数据|国内财险（车险）龙头
-06030|中信证券|券商|寡头|窄|规模、牌照|国内头部券商
-00002|中电控股|公用事业|垄断/特许|宽|管制电网、特许经营|香港电力（准许回报）
-00006|电能实业|公用事业|垄断/特许|宽|管制资产|全球受规管电网与燃气资产
-00003|香港中华煤气|公用事业|垄断/特许|宽|管网垄断|香港燃气 + 内地城燃
-01038|长江基建集团|公用事业|垄断/特许|窄|管制资产|全球受规管基础设施
-00270|粤海投资|公用事业|垄断/特许|宽|独家供水|东深供水（供港供深）
-02688|新奥能源|城市燃气|垄断/特许|窄|城燃特许经营|城市燃气 + 综合能源
-01193|华润燃气|城市燃气|垄断/特许|窄|城燃特许经营|城市燃气
-00135|昆仑能源|城市燃气|垄断/特许|窄|特许经营、气源|天然气销售 + LNG
-00384|中国燃气|城市燃气|垄断/特许|窄|城燃特许经营|城市燃气
-00066|港铁公司|交通基础设施|垄断/特许|宽|独家经营 + 物业开发权|香港铁路 + 车站物业
-00177|江苏宁沪高速公路|收费公路|垄断/特许|窄|特许经营|沪宁高速等收费公路
-00548|深圳高速公路股份|收费公路|垄断/特许|窄|特许经营|深圳及周边收费公路
-00576|浙江沪杭甬|收费公路|垄断/特许|窄|特许经营|浙江收费公路 + 证券
-00144|招商局港口|港口|寡头|窄|区位稀缺|全球港口码头
-00823|领展房产基金|商业地产|寡头|窄|区位稀缺|香港社区商场与停车场
-01209|华润万象生活|物业/商管|寡头|窄|品牌、商业运营能力|购物中心运营 + 物管
-00836|华润电力|电力|寡头|窄|规模、电网接入|火电 + 新能源发电
-01088|中国神华|煤炭|寡头|宽|资源、煤电路港一体化|煤炭 + 电力 + 铁路港口
-00883|中国海洋石油|石油|寡头|宽|资源、低成本|海上油气勘探开采（成本领先）
-00857|中国石油股份|石油|寡头|窄|资源、管网|油气上下游一体化
-02899|紫金矿业|有色金属|竞争较激烈|窄|资源、低成本|铜金矿开采
-01378|中国宏桥|有色金属|寡头|窄|规模成本、产能指标|电解铝（产能天花板）
-00914|海螺水泥|建材|寡头|窄|区域规模、成本|水泥（华东龙头）
-00669|创科实业|电动工具|寡头|宽|品牌、电池平台转换成本|Milwaukee / Ryobi 电动工具
-02319|蒙牛乳业|乳制品|双寡头|窄|品牌、渠道|液态奶（与伊利双寡头）
-00291|华润啤酒|啤酒|寡头|窄|品牌、渠道、产能|啤酒 + 白酒
-00168|青岛啤酒股份|啤酒|寡头|窄|品牌|啤酒
-01876|百威亚太|啤酒|寡头|窄|品牌、高端化|高端啤酒
-00322|康师傅控股|食品饮料|双寡头|窄|品牌、渠道|方便面 + 饮料
-00220|统一企业中国|食品饮料|双寡头|窄|品牌、渠道|方便面 + 饮料
-09633|农夫山泉|食品饮料|寡头|宽|品牌、水源地、渠道|包装饮用水 + 茶饮料
-00151|中国旺旺|食品饮料|竞争较激烈|窄|品牌|米果 + 乳饮
-06186|中国飞鹤|乳制品|寡头|窄|品牌、渠道|国产婴幼儿奶粉
-09987|百胜中国|餐饮|竞争较激烈|窄|规模、供应链、品牌|肯德基 + 必胜客（中国）
-06862|海底捞|餐饮|竞争较激烈|窄|品牌、服务|火锅
-02020|安踏体育|服饰|寡头|窄|多品牌、渠道|安踏 + FILA + 始祖鸟（亚玛芬）
-02331|李宁|服饰|寡头|窄|品牌|运动服饰
-02313|申洲国际|纺织制造|寡头|窄|规模、客户粘性|耐克/优衣库等面料成衣代工
-01929|周大福|珠宝|寡头|窄|品牌、渠道|黄金珠宝零售
-01913|普拉达|奢侈品|寡头|宽|品牌|Prada / Miu Miu
-00027|银河娱乐|博彩|寡头|宽|澳门博彩牌照（仅 6 张）|澳门综合度假村
-01928|金沙中国有限公司|博彩|寡头|宽|澳门博彩牌照|澳门综合度假村
-06690|海尔智家|家电|寡头|窄|品牌、渠道|白电（冰洗龙头）
-00992|联想集团|电脑|寡头|窄|规模、供应链|PC + 服务器
-02382|舜宇光学科技|光学|寡头|窄|规模、工艺|手机/车载镜头
-00522|ASMPT|半导体设备|寡头|窄|技术、客户认证|半导体封装设备
-00981|中芯国际|半导体|寡头|窄|规模、国产替代|晶圆代工
-06969|思摩尔国际|电子烟|寡头|窄|技术、专利、规模|雾化设备代工
-01099|国药控股|医药流通|寡头|窄|分销网络|药品分销（国内龙头）
-01093|石药集团|医药|竞争较激烈|窄|研发管线、渠道|仿制药 + 创新药
-02269|药明生物|医药外包|寡头|窄|规模、客户转换成本|生物药 CDMO
-03692|翰森制药|医药|竞争较激烈|窄|研发管线|创新药
-09901|新东方-S|教育|寡头|窄|品牌|留学考试培训 + 素质教育
-03888|金山软件|软件|寡头|窄|用户习惯、转换成本|WPS 办公 + 游戏
+00700|腾讯控股|互联网|平台互联网|垄断/特许|宽|关系链迁移成本极高，对手进不来；进来的社交产品留不住人；游戏工业化+支付+广告都长在微信入口上|社交关系、内容娱乐与支付的日常刚需入口|AI 入口转移改变流量分配；游戏新品无法覆盖老产品衰退
+09988|阿里巴巴-W|互联网|平台互联网|寡头|窄|商家生态与物流仍是门槛，但拼多多、抖音已证明进得来也赚得到|商家为流量与成交付佣金和广告费，用户为选择与信任|电商份额与货币化率继续被挤压；云与 AI 资本开支回报不足
+09999|网易-S|游戏|消费品牌|双寡头|窄|长线运营与研发团队是能力，但每款游戏都要重新赢；靠持续复现爆款|玩家为长期运营的游戏内容付费|新品复现失败，老游戏收入自然衰退
+09618|京东集团-SW|电商零售|平台互联网|寡头|窄|自建物流是重资本壁垒，但同质化零售利润薄，增量常被补贴吃掉|用户为正品与次日达付费|价格战与新业务（外卖等）持续吞噬自由现金流
+01024|快手-W|互联网|平台互联网|双寡头|窄|与抖音双寡头，但用户时间可在平台间迁移，护城河取决于内容供给|广告主买用户注意力，主播电商买流量|用户时长被抖音和 AI 应用分流，货币化率见顶
+09888|百度集团-SW|互联网|平台互联网|垄断/特许|窄|搜索份额曾近垄断，但 AI 回答正在绕开搜索入口|广告主为搜索意图流量付费|AI 侵蚀搜索广告，AI 投入无法变成自由现金流
+09961|携程集团-S|在线旅游|平台互联网|垄断/特许|宽|酒店供给与用户双边网络+服务体系，对手（美团、抖音）进入多年仍难撼动高星酒店与商旅|用户为选择、价格与售后保障付费，酒店为订单付佣金|监管或竞争压低佣金率；出境与海外扩张单位经济不成立
+03690|美团-W|本地生活|平台互联网|寡头|窄|骑手与商户密度是门槛，但京东、阿里能靠补贴杀入并把利润打掉；履约能力不自动迁移到新业务|商户为订单与配送付佣金，用户为便利付费|补贴战长期化，外卖利润无法回到战前
+02057|中通快递-W|快递物流|制造|寡头|窄|成本领先帮助生存，但快递高度同质化，成本下降常被价格战让渡|电商卖家为低价可靠的配送付费|价格战回归，单票利润持续下滑
+00941|中国移动|电信|公用特许|寡头|窄|牌照与网络让对手进不来，但三家同质竞争+提速降费，超额利润被监管和用户拿走|个人和企业为通信连接付月费|ARPU 下滑、算力等新业务资本回报低
+00728|中国电信|电信|公用特许|寡头|窄|同上，牌照保护存续而非超额利润|个人和企业为宽带、移动与云付费|云业务价格战，资本开支回报不足
+00762|中国联通|电信|公用特许|寡头|窄|同上，且规模最小、议价力最弱|个人和企业为通信连接付费|利润连续下滑已在发生
+00788|中国铁塔|通信基础设施|公用特许|垄断/特许|窄|站址垄断让对手进不来，但三大运营商既是客户又是股东，定价权在客户手里，超额利润被拿走|运营商为共享站址付租金|续约降价；新业务（能源、智联）回报不足
+00388|香港交易所|交易所|金融|垄断/特许|宽|法定唯一交易所+流动性网络效应，进不来、抢不走|发行人为上市付费，投资者为交易与结算付费|成交额长期萎缩；互联互通政策逆转
+03968|招商银行|银行|金融|竞争较激烈|宽|零售客户关系与低成本存款是多年积累，同业学了多年仍追不上 ROE|居民把存款与财富管理托付给它|息差收窄+财富管理费率下行压低 ROE
+01398|工商银行|银行|金融|寡头|窄|规模与存款网络稳固，但利润归属受政策调节（让利实体）|企业与居民的存贷结算|息差持续收窄、资产质量（地产/地方债）
+00939|建设银行|银行|金融|寡头|窄|同上，按揭敞口更大|同上|按揭早偿与地产资产质量
+03988|中国银行|银行|金融|寡头|窄|同上，海外网络是差异|同上，跨境结算|息差收窄、海外风险
+01288|农业银行|银行|金融|寡头|窄|同上，县域网络是差异|同上，县域存贷|息差收窄、县域资产质量
+00005|汇丰控股|银行|金融|寡头|窄|全球网络+港元发钞行地位，但业务多为同质化银行|跨境企业与财富客户|利率下行压息差；地缘政治
+02388|中银香港|银行|金融|寡头|窄|港元发钞行之一，香港本地份额稳定|香港居民与企业的存贷结算|香港利率与地产周期
+01299|友邦保险|保险|金融|寡头|宽|顶级代理人队伍与品牌，同业高薪挖角多年仍复制不了其新业务价值率|居民为长期保障与储蓄付保费|内地访客业务政策变化；新业务价值增速放缓
+02318|中国平安|保险|金融|寡头|窄|代理人渠道曾是壁垒，但队伍大幅收缩；综合金融协同未证明转化为稳态回报|居民为保障与储蓄付保费|新业务价值继续下滑，地产投资减值
+02628|中国人寿|保险|金融|寡头|窄|规模与网点，但产品同质，利润随资本市场大幅波动|居民为储蓄型保险付保费|利率下行带来利差损；权益投资波动
+02328|中国财险|保险|金融|寡头|宽|车险定价数据与理赔网络带来持续更低的综合成本率，对手进得来但赚不到同样的承保利润|车主与企业为风险保障付保费|新能源车险定价失误；巨灾损失
+06030|中信证券|券商|金融|寡头|窄|头部牌照与机构客户，但经纪、投行高度同质，周期性强|企业为融资、投资者为交易付费|市场成交萎缩，自营投资亏损
+00002|中电控股|公用事业|公用特许|垄断/特许|窄|香港管制电网让对手进不来，但准许回报制度决定了没有超额利润|香港用户为稳定供电付电费|管制计划下调准许回报；海外电厂减值
+00006|电能实业|公用事业|公用特许|垄断/特许|窄|全球受规管资产，回报被监管锁定|用户为电力燃气输配付费|海外监管重置压低回报
+00003|香港中华煤气|公用事业|公用特许|垄断/特许|窄|香港管网独家，但内地城燃竞争和监管压价|用户为燃气付费|内地接驳费消失、气价顺价不畅
+01038|长江基建集团|公用事业|公用特许|垄断/特许|窄|受规管资产，回报被监管锁定|用户为基础设施服务付费|英国等监管周期重置压低回报
+00270|粤海投资|公用事业|公用特许|垄断/特许|窄|东深供水独家，但水价由政府定，超额利润有限|深港两地为供水付费|水价下调；地产业务拖累
+02688|新奥能源|城市燃气|公用特许|垄断/特许|窄|特许经营区域独家，但接驳费见顶、零售气价受管制|工商业与居民为燃气付费|接驳业务萎缩；顺价机制失灵
+01193|华润燃气|城市燃气|公用特许|垄断/特许|窄|同上|同上|同上
+00135|昆仑能源|城市燃气|公用特许|垄断/特许|窄|气源+特许经营，但利润受管制|同上|同上
+00384|中国燃气|城市燃气|公用特许|垄断/特许|窄|同上，负债较高|同上|同上
+00066|港铁公司|交通基础设施|公用特许|垄断/特许|窄|香港铁路独家经营+车站上盖物业开发权是真正的超额利润来源，但物业周期性强|乘客为通勤付票价，买家为站上物业付溢价|香港楼市低迷令物业利润断档；新线资本开支巨大
+00177|江苏宁沪高速公路|收费公路|公用特许|垄断/特许|窄|特许经营期内独家，期满即归零|车主为通行付费|收费期到期、车流被高铁与新路分流
+00548|深圳高速公路股份|收费公路|公用特许|垄断/特许|窄|同上|同上|同上，环保业务拖累
+00576|浙江沪杭甬|收费公路|公用特许|垄断/特许|窄|同上，另有证券业务|同上|同上，证券业务波动
+00144|招商局港口|港口|公用特许|寡头|窄|港口区位稀缺，但吞吐量随贸易周期|航运公司为装卸停泊付费|全球贸易萎缩、地缘政治
+00823|领展房产基金|商业地产|公用特许|寡头|窄|社区商场区位稀缺，租金随零售周期|租户为客流付租金|香港零售疲弱、租金下调
+01209|华润万象生活|物业/商管|线下服务|寡头|窄|商业运营能力+华润系项目来源，但依赖母公司开发|商场业主为运营管理付费|母公司开发放缓、物管价格战
+00836|华润电力|电力|周期商品化|寡头|无|发电同质，电价与煤价都不由自己定；成本优势只帮助生存|电网为电量付费|电价下行、新能源弃电
+01088|中国神华|煤炭|周期商品化|寡头|无|煤电路港一体化降低波动，但煤价决定利润，属于商品化生意|电厂与工业用户为煤炭付费|煤价回落到周期低位，高分红难持续
+00883|中国海洋石油|石油|周期商品化|寡头|无|桶油成本低帮助穿越周期，但油价决定利润，成本优势≠护城河|炼厂为原油付费|油价下行；资本开支刚性
+00857|中国石油股份|石油|周期商品化|寡头|无|一体化与管网资源，但盈利随油气价格|下游为油气付费|油价下行、炼化过剩
+02899|紫金矿业|有色金属|周期商品化|竞争较激烈|无|资源获取与低成本开采是能力，但金铜价格决定利润，当前利润可能处于周期高位|下游为金属付费|金铜价格回落，并购资源的高资本开支
+01378|中国宏桥|有色金属|周期商品化|寡头|无|电解铝产能天花板限制新供给，但仍是商品化定价|下游为铝付费|铝价下行；能源成本上升
+00914|海螺水泥|建材|周期商品化|寡头|无|区域规模与成本领先，但需求随地产基建萎缩，属于漫长出清|建筑商为水泥付费|地产基建需求继续萎缩
+00669|创科实业|电动工具|制造|寡头|宽|锂电平台让用户一旦买了 Milwaukee 电池就持续买同平台工具；专业用户信任难复制|专业工匠为可靠高效的工具系统付费|美国住房周期下行；关税
+02319|蒙牛乳业|乳制品|消费品牌|双寡头|窄|与伊利双寡头，渠道深，但液奶同质、提价能力弱|家庭为日常乳品付费|消费降级、奶价下行引发价格战
+00291|华润啤酒|啤酒|消费品牌|寡头|窄|产能与渠道整合后格局稳定，高端化提升利润；白酒业务存疑|消费者为日常饮酒付费|高端化停滞，白酒并购减值
+00168|青岛啤酒股份|啤酒|消费品牌|寡头|窄|品牌与渠道，格局稳定|同上|销量下滑、高端化不及对手
+01876|百威亚太|啤酒|消费品牌|寡头|窄|高端品牌组合，但中国夜场渠道萎缩|消费者为高端啤酒付溢价|中国高端渠道需求持续疲弱
+00322|康师傅控股|食品饮料|消费品牌|双寡头|窄|方便面与统一双寡头，提价后销量能守住|消费者为便利与口味付费|外卖替代方便面；饮料竞争加剧
+00220|统一企业中国|食品饮料|消费品牌|双寡头|窄|同上|同上|同上
+09633|农夫山泉|食品饮料|消费品牌|寡头|宽|优质水源地+品牌+终端冰柜网络，2024 年舆情冲击后份额恢复，证明「赚到后抢不走」|消费者为安全好喝的水和茶付溢价|茶饮料竞争加剧；渠道库存
+00151|中国旺旺|食品饮料|消费品牌|竞争较激烈|窄|老品牌，但品类老化、新品复现弱|消费者为零食付费|核心品类持续萎缩
+06186|中国飞鹤|乳制品|消费品牌|寡头|窄|国产高端奶粉品牌，但出生人口下降压缩真实市场|父母为婴儿奶粉的安全感付费|出生人口继续下降+价格战
+09987|百胜中国|餐饮|线下服务|竞争较激烈|窄|供应链与单店模型可复制，但西式快餐竞争激烈|消费者为标准化快餐付费|同店销售下滑，开店损害单店回报
+06862|海底捞|餐饮|线下服务|竞争较激烈|窄|服务是购买理由，但能否覆盖全生命周期成本存疑；火锅门槛低|消费者为服务与体验付溢价|翻台率下滑、新品牌复制失败
+02020|安踏体育|服饰|消费品牌|寡头|窄|多品牌运营能力已在 FILA、始祖鸟上复现|消费者为运动品牌付溢价|主品牌增长停滞；亚玛芬估值风险
+02331|李宁|服饰|消费品牌|寡头|窄|品牌曾凭国潮崛起，但未证明能持续复现|消费者为运动品牌付费|品牌力下滑、折扣加深
+02313|申洲国际|纺织制造|制造|寡头|窄|垂直一体化与大客户关系，但议价权在耐克等品牌手里|品牌商为高品质快速交付付代工费|大客户砍单、东南亚产能竞争
+01929|周大福|珠宝|消费品牌|寡头|窄|渠道与品牌，但按克计价的黄金产品同质化|消费者为黄金饰品付费|金价高企压制需求；产品同质被老铺等分流
+01913|普拉达|奢侈品|消费品牌|寡头|宽|百年品牌与稀缺性，提价后需求能守住|消费者为身份与审美付高溢价|奢侈品周期下行；Miu Miu 热度回落
+00027|银河娱乐|博彩|周期商品化|寡头|宽|澳门仅 6 张博彩牌照，进不来；但收入随访澳客流周期|赌客与游客为娱乐与度假付费|访澳客流与消费疲弱；牌照条件收紧
+01928|金沙中国有限公司|博彩|周期商品化|寡头|宽|同上，非博彩会展是差异；负债较高|同上|同上，负债压力
+06690|海尔智家|家电|消费品牌|寡头|窄|高端品牌卡萨帝与全球渠道，但家电竞争激烈|家庭为可靠家电付费|地产低迷、以旧换新透支需求
+00992|联想集团|电脑|制造|寡头|窄|PC 规模与供应链，但硬件同质，利润薄|企业与个人为电脑付费|PC 换机周期弱；AI 服务器低毛利
+02382|舜宇光学科技|光学|制造|寡头|窄|镜头工艺与良率，但手机客户议价强|手机与车厂为镜头模组付费|手机需求疲弱、客户砍价
+00522|ASMPT|半导体设备|科技|寡头|窄|先进封装设备技术与客户认证|芯片厂为封装设备付费|半导体周期下行；国产替代
+00981|中芯国际|半导体|科技|寡头|窄|国产替代下的规模，但成熟制程产能扩张快，资本开支巨大|芯片设计公司为代工付费|成熟制程价格战，增量资本回报低
+06969|思摩尔国际|电子烟|制造|寡头|窄|雾化专利与制造工艺，但依赖大客户|烟草公司为雾化设备付费|监管收紧、自有品牌投入失败
+01099|国药控股|医药流通|医药|寡头|窄|分销网络规模，但利润被集采与医院议价压薄|医院与药店为配送付费|集采降价、医院回款变慢
+01093|石药集团|医药|医药|竞争较激烈|窄|研发管线与销售网络，但仿制药被集采压价|患者与医保为药品付费|集采与创新药失败
+02269|药明生物|医药外包|医药|寡头|窄|客户一旦把项目放进其平台，切换成本高|药企为研发生产外包付费|地缘政治（生物安全法）
+03692|翰森制药|医药|医药|竞争较激烈|窄|创新药管线已证明可复现|患者与医保为创新药付费|新药放量不及预期、集采
+09901|新东方-S|教育|线下服务|寡头|窄|品牌与教研体系，留学业务需求受经济影响|学生与家长为升学与留学付费|留学需求下滑、政策
+03888|金山软件|软件|科技|寡头|窄|WPS 用户习惯与政企国产替代|个人与政企为办公软件付费|AI 办公工具替代；游戏下滑
 `;
-const POOL = POOL_TEXT.trim().split('\n').map(l=>{ const [code,name,ind,struct,moat,moatSrc,core] = l.split('|'); return {code,name,ind,struct,moat,moatSrc,core}; });
+const POOL = POOL_TEXT.trim().split('\n').map(l=>{ const [code,name,ind,type,struct,moat,moatSrc,core,counter] = l.split('|'); return {code,name,ind,type,struct,moat,moatSrc,core,counter}; });
 const STRUCT_SCORE = {'垄断/特许':1,'双寡头':0.85,'寡头':0.7,'竞争较激烈':0.4,'未评估':0.4};
-const MOAT_SCORE = {'宽':1,'窄':0.6,'未评估':0.3};
+const MOAT_SCORE = {'宽':1,'窄':0.6,'无':0.1,'未评估':0.3};
 </script>
 
 <script>
@@ -322,17 +336,19 @@ const isFin = o => /银行|保险|证券/.test(o.orgType||'') || /银行|保险|
 
 // ---------- 权重 ----------
 const LF = [
-  {k:'hist', name:'自身历史估值分位', w:40},
-  {k:'gap', name:'杀估值不杀业绩', w:30},
-  {k:'pos', name:'52 周位置', w:15},
-  {k:'div', name:'股息率', w:15},
+  {k:'imp', name:'价格隐含预期 vs 过去增长', w:30},
+  {k:'fcf', name:'正常化自由现金流收益率', w:25},
+  {k:'hist', name:'自身历史估值分位', w:20},
+  {k:'gap', name:'杀估值不杀业绩', w:15},
+  {k:'pos', name:'52 周位置', w:10},
 ];
-const weights = Object.assign(Object.fromEntries(LF.map(f=>[f.k,f.w])), store.get('hkq_w', {}));
+const DISCOUNT = 0.09; // 港股要求回报率，用于把价格翻译成隐含永续增长
+const weights = Object.assign(Object.fromEntries(LF.map(f=>[f.k,f.w])), store.get('hkq_w2', {}));
 $('#weights').innerHTML = LF.map(f=>`<div><div class="row" style="justify-content:space-between"><label>${f.name}</label><label id="wv_${f.k}">${weights[f.k]}</label></div><input type="range" min="0" max="60" value="${weights[f.k]}" data-k="${f.k}"></div>`).join('');
 $('#weights').addEventListener('input', e=>{
   const k = e.target.dataset.k; if(!k) return;
   weights[k] = +e.target.value; $('#wv_'+k).textContent = weights[k];
-  store.set('hkq_w', weights); scoreAll(); render();
+  store.set('hkq_w2', weights); scoreAll(); render();
 });
 
 // ---------- 网络 ----------
@@ -387,7 +403,7 @@ async function loadQuotes(codes){
 }
 
 // ---------- 数据：财报（东方财富 F10） ----------
-const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,OPERATE_INCOME,GROSS_PROFIT,OPERATE_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
+const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,OPERATE_INCOME,GROSS_PROFIT,OPERATE_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,TOTAL_PARENT_EQUITY,ISSUED_COMMON_SHARES,NET_PROFIT_RATIO,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
 async function loadFin(codes){
   const groups = []; for(let i=0;i<codes.length;i+=8) groups.push(codes.slice(i,i+8));
   const out = {}; let done = 0;
@@ -399,6 +415,27 @@ async function loadFin(codes){
     (d && d.result && d.result.data || []).forEach(r=>{ (out[r.SECURITY_CODE] ||= []).push(r); });
     done++; setStatus(`读取财报 ${done}/${groups.length}…`); setProg(0.1 + 0.4*done/groups.length);
   });
+  return out;
+}
+
+// ---------- 数据：年度现金流量表（东方财富 F10） ----------
+// 003999 经营现金流 · 005005 购建固定资产 · 005007 购建无形资产 · 007004 已付股息 · 007008 回购
+const CF_ITEMS = {'003999':'ocf','005005':'capexF','005007':'capexI','007004':'div','007008':'buy'};
+async function loadCF(codes){
+  const groups = []; for(let i=0;i<codes.length;i+=8) groups.push(codes.slice(i,i+8));
+  const out = {}; let done = 0;
+  await pmap(groups, 3, async g=>{
+    const f = `(SECUCODE in (${g.map(c=>`"${c}.HK"`).join(',')}))(DATE_TYPE_CODE="001")(STD_ITEM_CODE in (${Object.keys(CF_ITEMS).map(k=>`"${k}"`).join(',')}))(REPORT_DATE>='2018-01-01')`;
+    const url = `https://datacenter.eastmoney.com/securities/api/data/v1/get?reportName=RPT_HKF10_FN_CASHFLOW_PC&columns=SECURITY_CODE,REPORT_DATE,STD_ITEM_CODE,AMOUNT&filter=${encodeURIComponent(f)}&pageNumber=1&pageSize=500&sortTypes=1&sortColumns=REPORT_DATE&source=F10&client=PC`;
+    let d = null;
+    for(let t=0;t<2 && !d;t++){ try{ d = await jsonp(url); }catch(e){} }
+    (d && d.result && d.result.data || []).forEach(x=>{
+      const y = x.REPORT_DATE.slice(0,10), o = (out[x.SECURITY_CODE] ||= {});
+      (o[y] ||= {d:y})[CF_ITEMS[x.STD_ITEM_CODE]] = num(x.AMOUNT);
+    });
+    done++; setStatus(`读取现金流量表 ${done}/${groups.length}…`);
+  });
+  for(const c in out) out[c] = Object.values(out[c]).sort((a,b)=>a.d<b.d?-1:1);
   return out;
 }
 
@@ -419,27 +456,28 @@ async function loadKline(codes){
 
 // ---------- 状态 ----------
 let customCodes = store.get('hkq_custom', []);
-let FIN = {}, KL = {}, Q = {}, items = [], loading = false, timer = null;
+let FIN = {}, CF = {}, KL = {}, Q = {}, items = [], loading = false, timer = null;
 let sortKey = 'low', sortDir = -1, openCode = null;
 const stars = new Set(store.get('hkq_star', []));
 let prevFocus = new Set(store.get('hkq_prevfocus', [])), newFocus = new Set();
 
 function poolAll(){
   const m = new Map(POOL.map(p=>[p.code,p]));
-  customCodes.forEach(c=>{ if(!m.has(c)) m.set(c, {code:c, name:'', ind:'自定义', struct:'未评估', moat:'未评估', moatSrc:'未评估（自定义加入）', core:'—', custom:true}); });
+  customCodes.forEach(c=>{ if(!m.has(c)) m.set(c, {code:c, name:'', ind:'自定义', type:'未评估', struct:'未评估', moat:'未评估', moatSrc:'未评估（自定义加入，仅做财务体检）', core:'—', counter:'—', custom:true}); });
   return [...m.values()];
 }
 
 async function loadSlow(force){
   const pool = poolAll(), codes = pool.map(p=>p.code);
   const cache = store.get('hkq_cache', null);
-  const fresh = cache && cache.v===3 && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
-  if(!force && fresh){ FIN = cache.fin; KL = cache.kl; return '缓存'; }
+  const fresh = cache && cache.v===5 && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
+  if(!force && fresh){ FIN = cache.fin; CF = cache.cf || {}; KL = cache.kl; return '缓存'; }
   FIN = await loadFin(codes);
   if(!Object.keys(FIN).length) throw new Error('东方财富财报接口无响应，无法做基本面体检（请稍后点「重拉财报」）');
+  CF = await loadCF(codes);
   KL = await loadKline(codes);
   const miss = codes.filter(c=>!(c in FIN));
-  try{ store.set('hkq_cache', {v:3, t:Date.now(), fin:FIN, kl:KL, miss}); }catch(e){}
+  try{ store.set('hkq_cache', {v:5, t:Date.now(), fin:FIN, cf:CF, kl:KL, miss}); }catch(e){}
   return '实时';
 }
 
@@ -461,7 +499,7 @@ async function refresh(force=false){
 }
 
 // ---------- 第二层：质量分与体检 ----------
-function analyzeFin(p, rows){
+function analyzeFin(p, rows, cfRows){
   const r = (rows||[]).map(x=>({...x, d:x.STD_REPORT_DATE.slice(0,10)})).sort((a,b)=>a.d<b.d?-1:1);
   if(!r.length) return null;
   // 拆股 / 合股校正：每股净资产相邻两期跳变超过 3 倍，视为股本变动，把更早的每股数据换算到当前股本
@@ -494,15 +532,51 @@ function analyzeFin(p, rows){
   const dar = num(last.DEBT_ASSET_RATIO);
   const dar3 = (()=>{ const t = new Date(last.d); t.setFullYear(t.getFullYear()-3); const s=t.toISOString().slice(0,10); const x=[...r].reverse().find(x=>x.d<=s); return x?num(x.DEBT_ASSET_RATIO):null; })();
 
-  // 质量分
+  // ---- 现金与资本（框架的「终验」：竞争后的稳态自由现金流）----
+  const cyclical = p.type==='周期商品化';
+  const npByYear = Object.fromEntries(annual.map(x=>[x.d, num(x.HOLDER_PROFIT)]));
+  // 归母占比 = 归母净利 ÷ 全部净利（含少数股东）。现金流是合并口径，要乘这个比例才是属于本公司股东的部分
+  const shareOf = x => { const np = num(x.HOLDER_PROFIT), rv = num(x.OPERATE_INCOME), npr = num(x.NET_PROFIT_RATIO); return (np>0 && rv>0 && npr>0) ? clamp(np/(rv*npr/100), 0.3, 1) : null; };
+  const parentShare = mean(annual.slice(-3).map(shareOf)) ?? 1;
+  const cfy = (cfRows||[]).filter(x=>x.ocf!=null).map(x=>{
+    const capex = (x.capexF||0) + (x.capexI||0);
+    return {...x, capex, fcf:(x.ocf-capex)*parentShare, np:npByYear[x.d] ?? null, ret:(x.div||0)+(x.buy||0)};
+  });
+  const c3 = cfy.slice(-3), cN = cfy.slice(cyclical ? -5 : -3);
+  // 资本开支科目缺失（数据源对部分行业用了别的科目）时，不能把经营现金流当成自由现金流
+  const capexMissing = !fin && c3.length>0 && c3.every(x=>x.capexF==null);
+  const sumNp3 = c3.reduce((s,x)=>s+(x.np||0),0), sumFcf3 = c3.reduce((s,x)=>s+x.fcf,0);
+  const fcfConv = (!fin && !capexMissing && c3.length>=2 && sumNp3>0) ? sumFcf3/sumNp3 : null;
+  const sumOcf3 = c3.reduce((s,x)=>s+x.ocf,0);
+  const capexInt = (!fin && !capexMissing && sumOcf3>0) ? c3.reduce((s,x)=>s+x.capex,0)/sumOcf3 : null;
+  const normFCF = (!fin && !capexMissing && cN.length>=2) ? mean(cN.map(x=>x.fcf)) : null;
+  const shRet = cfy.length ? mean(cfy.slice(-2).map(x=>x.ret)) : null;
+  const fcfNegYears = cfy.slice(-5).filter(x=>x.fcf<0).length;
+  const shNow = num(last.ISSUED_COMMON_SHARES);
+  const sh5 = (()=>{ const x = annual[annual.length-6] || annual[0]; return x ? num(x.ISSUED_COMMON_SHARES) : null; })();
+  const shRatio = (shNow>0 && sh5>0) ? shNow/sh5 : null;
+  const dil = (shRatio!=null && shRatio>0.5 && shRatio<2) ? (shRatio-1)*100 : null; // 超出范围多为拆合股，不计
+  // 取 2018 年起（约 7 年）的复合增速，避免以 2020 年疫情低谷为基数
+  const cagr = (k) => { const a = annual.slice(-8); if(a.length<4) return null; const x0 = num(a[0][k]), x1 = num(a[a.length-1][k]); const n = (new Date(a[a.length-1].d)-new Date(a[0].d))/(365.25*864e5); return (x0>0 && x1>0 && n>=2) ? (Math.pow(x1/x0, 1/n)-1)*100 : null; };
+  const revCagr = cagr('OPERATE_INCOME'), npCagr = cagr('HOLDER_PROFIT');
+  const equity = num(last.TOTAL_PARENT_EQUITY);
+
+  // ---- 质量分：从「用户为什么付钱」追到「竞争后的稳态自由现金流」----
   const parts = [];
-  if(roeAvg!=null) parts.push([30, clamp((roeAvg-5)/17)]);
-  if(roeAvg>0 && roeMin!=null) parts.push([20, clamp((roeMin/roeAvg-0.4)/0.55)]);
-  if(revYoys.length>=3) parts.push([15, revYoys.filter(x=>x>0).length/revYoys.length]);
-  if(!fin && gm.length>=3) parts.push([15, clamp(1 - std(gm)/6)]);
-  else if(fin && roeAvg>0 && roeMin!=null) parts.push([15, clamp((roeMin/roeAvg-0.4)/0.55)]);
-  if(!fin && cfo.filter(x=>x!=null).length) parts.push([10, clamp((mean(cfo)-0.5)/0.7)]);
-  parts.push([10, (STRUCT_SCORE[p.struct]??0.4)*0.5 + (MOAT_SCORE[p.moat]??0.3)*0.5]);
+  const qual = (MOAT_SCORE[p.moat]??0.3)*0.6 + (STRUCT_SCORE[p.struct]??0.4)*0.4;
+  if(!fin){
+    if(fcfConv!=null) parts.push([25, clamp((fcfConv-0.3)/0.7) * (fcfNegYears>=2 ? 0.5 : 1)]); // 利润能否变成自由现金流
+    if(roeAvg!=null) parts.push([20, clamp((roeAvg-5)/17)]);                                    // 稳态回报水平
+    if(roeAvg>0 && roeMin!=null) parts.push([15, clamp((roeMin/roeAvg-0.4)/0.55)]);            // 竞争与周期后利润是否还在
+    if(gm.length>=3) parts.push([10, clamp(1 - std(gm)/6)]);                                    // 定价权：毛利率稳定
+    if(capexInt!=null || dil!=null) parts.push([10, (capexInt!=null ? 0.6*clamp(1-(capexInt-0.2)/0.6) : 0.3) + (dil!=null ? 0.4*clamp(1-dil/15) : 0.2)]); // 资本轻重与稀释
+  } else {
+    if(roeAvg!=null) parts.push([25, clamp((roeAvg-5)/12)]);
+    if(roeAvg>0 && roeMin!=null) parts.push([25, clamp((roeMin/roeAvg-0.4)/0.55)]);
+    if(revYoys.length>=3) parts.push([10, revYoys.filter(x=>x>0).length/revYoys.length]);
+    if(dil!=null) parts.push([10, clamp(1-dil/15)]);
+  }
+  parts.push([20, qual]);                                                                         // 护城河三问（人工）
   const W = parts.reduce((s,x)=>s+x[0],0);
   const quality = parts.reduce((s,x)=>s+x[0]*x[1],0)/W*100;
 
@@ -534,8 +608,11 @@ function analyzeFin(p, rows){
   const turn = turnCheck(periods, revYoy, fin);
   if(verdict==='fail' && turn.ok) verdict = 'turn';
 
+  const peak = cyclical && roeY!=null && roeAvg>0 && roeY > roeAvg*1.3;
+
   return { rows:r, annual, last, fin, roeAvg, roeMin, roeY, gm3, gmNow, revYoy, profYoy, epsNow, epsChg, quality,
-    hard, soft, verdict, periods, turn, reportType:last.REPORT_TYPE, orgType:last.ORG_TYPE };
+    hard, soft, verdict, periods, turn, reportType:last.REPORT_TYPE, orgType:last.ORG_TYPE,
+    cfy, fcfConv, capexInt, normFCF, shRet, fcfNegYears, dil, parentShare, capexMissing, revCagr, npCagr, equity, cyclical, peak };
 }
 
 // 把「年初至今累计」的财报拆成单季 / 单半年
@@ -583,7 +660,7 @@ function turnCheck(P, revYoy, fin){
 // 用财报 EPS_TTM / BPS 与月度股价重建过去 5 年的 PE / PB
 function histValuation(f, kl, q){
   if(!f || !kl || kl.length<24 || !q || !q.price) return null;
-  const usePB = f.fin;
+  const usePB = f.fin || f.cyclical; // 周期股的 PE 在利润高点最低，用 PB 更不容易被骗
   const field = usePB ? 'BPS' : 'EPS_TTM';
   const rep = f.rows.filter(x=>num(x[field])>0).map(x=>{ const t=new Date(x.d); t.setDate(t.getDate()+75); return [t.toISOString().slice(0,10), num(x[field])]; });
   if(!rep.length) return null;
@@ -607,14 +684,23 @@ function histValuation(f, kl, q){
 function build(){
   items = poolAll().map(p=>{
     const q = Q[p.code] || null;
-    const f = analyzeFin(p, FIN[p.code]);
+    const f = analyzeFin(p, FIN[p.code], CF[p.code]);
     const h = f ? histValuation(f, KL[p.code], q) : null;
     const name = p.name || q?.qname || p.code;
     const pos52 = (q && q.hi52 > q.lo52) ? clamp((q.price-q.lo52)/(q.hi52-q.lo52)) : null;
-    const gap = (f && h && f.epsChg!=null && h.priceChg!=null) ? f.epsChg - h.priceChg : null;
+    const gap = (f && h && !f.cyclical && f.epsChg!=null && h.priceChg!=null) ? f.epsChg - h.priceChg : null;
+    // 价格 → 隐含预期：市值（报表币种）= PB × 归母净资产，币种自动对齐
+    const mcap = (f && q?.pb>0 && f.equity>0) ? q.pb * f.equity : null;
+    const fcfY = (mcap && f.normFCF!=null) ? f.normFCF/mcap*100 : null;   // 正常化自由现金流收益率
+    const shY  = (mcap && f.shRet!=null) ? f.shRet/mcap*100 : null;       // 分红+回购收益率
+    const yld  = f?.fin ? shY : fcfY;
+    const impG = yld!=null ? (DISCOUNT - yld/100)/(1 + yld/100)*100 : null; // 永续增长模型反推：价格隐含的长期增长率
+    const pastG = !f ? null : f.cyclical ? 0 : (f.fin ? f.npCagr : f.revCagr);
+    const histG = pastG==null ? null : clamp(pastG, -10, 15); // 封顶 15%：高增长不能无限外推
+    const expGap = (impG!=null && histG!=null) ? histG - impG : null;
     const kl = KL[p.code], p1y = kl && kl.length>=13 ? kl[kl.length-13][1] : null;
     const pc1y = (p1y && q?.price) ? (q.price/p1y-1)*100 : null;
-    return {...p, name, q, f, h, pos52, gap, pc1y, price:q?.price, pct:q?.pct, dy:q?.dy, pe:q?.pe, pb:q?.pb,
+    return {...p, name, q, f, h, pos52, gap, pc1y, mcap, fcfY, shY, impG, histG, expGap, price:q?.price, pct:q?.pct, dy:q?.dy, pe:q?.pe, pb:q?.pb,
       quality:f?.quality ?? null, verdict:f?.verdict ?? 'nodata', histPct:h?.pct ?? null};
   });
 }
@@ -623,16 +709,17 @@ function build(){
 function scoreAll(fromRefresh){
   items.forEach(it=>{
     const fct = {
+      imp: it.expGap!=null ? clamp((it.expGap+3)/13) : null,
+      fcf: (it.f?.fin ? it.shY : it.fcfY)!=null ? clamp((it.f?.fin ? it.shY : it.fcfY)/10) : null,
       hist: it.histPct!=null ? 1-it.histPct : null,
       gap: it.gap!=null ? clamp((it.gap+10)/60) : null,
       pos: it.pos52!=null ? 1-it.pos52 : null,
-      div: it.dy!=null ? clamp(it.dy/7) : null,
     };
     let s=0, w=0, W=0;
     LF.forEach(x=>{ W += weights[x.k]; if(fct[x.k]!=null){ s += fct[x.k]*weights[x.k]; w += weights[x.k]; } });
     it.fct = fct;
     it.low = (w && W) ? s/w*100*(0.75+0.25*w/W) : null;
-    it.focus = (it.verdict==='pass' || it.verdict==='watch') && it.quality>=60 && it.low>=65;
+    it.focus = (it.verdict==='pass' || it.verdict==='watch') && it.moat!=='无' && it.quality>=60 && it.low>=65;
   });
   if(fromRefresh){
     const cur = items.filter(x=>x.focus).map(x=>x.code);
@@ -643,14 +730,16 @@ function scoreAll(fromRefresh){
 
 // ---------- 渲染 ----------
 const COLS = [
-  {k:'star',t:'',l:1,ns:1},{k:'code',t:'代码',l:1},{k:'name',t:'名称',l:1},{k:'ind',t:'行业',l:1},
-  {k:'struct',t:'格局',l:1},{k:'moat',t:'护城河',l:1},
+  {k:'star',t:'',l:1,ns:1},{k:'code',t:'代码',l:1},{k:'name',t:'名称',l:1},{k:'type',t:'业态',l:1},
+  {k:'moat',t:'护城河',l:1},
   {k:'quality',t:'质量分'},{k:'low',t:'低预期分'},
-  {k:'price',t:'现价'},{k:'pct',t:'今日%'},{k:'val',t:'PE/PB'},{k:'histPct',t:'5年估值分位'},
-  {k:'epsChg',t:'1年EPS%'},{k:'priceChg',t:'1年股价%'},{k:'pos52',t:'52周位置'},{k:'dy',t:'股息率%'},
+  {k:'price',t:'现价'},{k:'pct',t:'今日%'},
+  {k:'yld',t:'FCF/股东回报收益率'},{k:'impG',t:'隐含长期增长'},{k:'histG',t:'过去增长'},
+  {k:'val',t:'PE/PB'},{k:'histPct',t:'5年估值分位'},{k:'pos52',t:'52周位置'},
   {k:'roeAvg',t:'5年均ROE'},{k:'verdict',t:'体检',l:1},
 ];
-const sortVal = (it,k) => ({epsChg:it.f?.epsChg, priceChg:it.h?.priceChg, roeAvg:it.f?.roeAvg, val:it.h?.now ?? it.pe,
+const yldOf = it => it.f?.fin ? it.shY : it.fcfY;
+const sortVal = (it,k) => ({yld:yldOf(it), epsChg:it.f?.epsChg, priceChg:it.h?.priceChg, roeAvg:it.f?.roeAvg, val:it.h?.now ?? it.pe,
   moat:MOAT_SCORE[it.moat], struct:STRUCT_SCORE[it.struct], verdict:{pass:2,watch:1}[it.verdict]??0}[k] ?? it[k]);
 function renderHead(){
   $('#thead').innerHTML = COLS.map(c=>`<th class="${c.l?'l':''}" data-k="${c.ns?'':c.k}">${c.t}${sortKey===c.k?(sortDir<0?' ↓':' ↑'):''}</th>`).join('');
@@ -666,7 +755,7 @@ const scoreBar = (v, color) => v==null ? '<span class="status">-</span>' : `<spa
 
 function passFilter(it){
   const m = $('#fMoat').value, s = $('#fStruct').value, ind = $('#fInd').value, q = $('#q').value.trim().toLowerCase();
-  if(m && it.moat!==m) return false;
+  if(m==='宽窄' ? it.moat==='无' : (m && it.moat!==m)) return false;
   if(s && it.struct!==s) return false;
   if(ind && it.ind!==ind) return false;
   if(q && !(it.code.includes(q) || (it.name||'').toLowerCase().includes(q))) return false;
@@ -705,21 +794,20 @@ function rowHtml(it){
     <td class="l"><span class="star ${stars.has(it.code)?'on':''}" data-s="${it.code}">${stars.has(it.code)?'★':'☆'}</span></td>
     <td class="l">${it.code}</td>
     <td class="l"><b>${esc(it.name)}</b> ${it.focus?'<span class="tag hot">重点关注</span>':''}${newFocus.has(it.code)?'<span class="tag hot">新</span>':''}</td>
-    <td class="l status">${esc(it.ind)}</td>
-    <td class="l">${it.struct}</td>
+    <td class="l status">${esc(it.type)}</td>
     <td class="l moat-${it.moat}">${it.moat}</td>
     <td>${scoreBar(it.quality,'var(--good)')}</td>
     <td title="${LF.map(f=>f.name+': '+(it.fct[f.k]==null?'无数据':(it.fct[f.k]*100).toFixed(0))).join('\n')}">${scoreBar(it.low,'var(--accent)')}</td>
     <td>${f2(it.price, it.price<10?3:2)}</td>
     <td>${sg(it.pct,2)}</td>
+    <td>${yldOf(it)==null?'<span class="status">-</span>':yldOf(it).toFixed(1)+'%'}${it.f?.fin?' <span class="status">股东</span>':''}</td>
+    <td>${it.impG==null?'<span class="status">-</span>':it.impG.toFixed(1)+'%'}</td>
+    <td>${it.histG==null?'<span class="status">-</span>':(it.f?.cyclical?'<span class="status">周期按0</span>':it.histG.toFixed(1)+'%')}</td>
     <td>${it.h? `${it.h.now.toFixed(it.h.metric==='PB'?2:1)} <span class="status">${it.h.metric}</span>` : f2(it.pe,1)}</td>
     <td>${it.histPct==null?'<span class="status">-</span>':`<span class="pos"><i style="left:calc(${(it.histPct*100).toFixed(0)}% - 2px)"></i></span> ${(it.histPct*100).toFixed(0)}%`}</td>
-    <td>${sg(it.f?.epsChg)}</td>
-    <td>${sg(it.h?.priceChg)}</td>
     <td>${it.pos52==null?'<span class="status">-</span>':(it.pos52*100).toFixed(0)+'%'}</td>
-    <td>${f2(it.dy,1)}</td>
     <td>${f2(it.f?.roeAvg,1)}</td>
-    <td class="l">${v}</td>
+    <td class="l">${v}${it.f?.peak?' <span class="tag w">疑似周期高点</span>':''}</td>
   </tr>${open?`<tr class="detail"><td colspan="${COLS.length}">${detailHtml(it)}</td></tr>`:''}`;
 }
 function profitBars(f){
@@ -763,17 +851,17 @@ function cardHtml(it){
       <div><span class="star ${stars.has(it.code)?'on':''}" data-s="${it.code}" style="font-size:18px;padding-right:4px">${stars.has(it.code)?'★':'☆'}</span><span class="nm">${esc(it.name)}</span> <span class="status">${it.code}</span></div>
       <div style="text-align:right"><b>${f2(it.price, it.price<10?3:2)}</b><div style="font-size:12px">${sg(it.pct,2)}%</div></div>
     </div>
-    <div class="tags">${it.focus?'<span class="tag hot">重点关注</span>':''}${newFocus.has(it.code)?'<span class="tag hot">新</span>':''}<span class="tag moat-${it.moat}">护城河 ${it.moat}</span><span class="tag">${esc(it.struct)}</span><span class="tag">${esc(it.ind)}</span>${v}</div>
+    <div class="tags">${it.focus?'<span class="tag hot">重点关注</span>':''}${newFocus.has(it.code)?'<span class="tag hot">新</span>':''}<span class="tag moat-${it.moat}">护城河 ${it.moat}</span><span class="tag">${esc(it.type)}</span><span class="tag">${esc(it.struct)}</span>${v}${it.f?.peak?'<span class="tag w">疑似周期高点</span>':''}</div>
     <div class="scores">
       <div><span class="l">质量分</span>${scoreBar(it.quality,'var(--good)')}</div>
       <div><span class="l">低预期分</span>${scoreBar(it.low,'var(--accent)')}</div>
     </div>
     <div class="metrics">
+      <div><span class="l">${it.f?.fin?'股东回报收益率':'FCF 收益率'}</span>${yldOf(it)==null?'-':yldOf(it).toFixed(1)+'%'}</div>
+      <div><span class="l">隐含长期增长</span>${it.impG==null?'-':it.impG.toFixed(1)+'%'}</div>
+      <div><span class="l">过去增长</span>${it.histG==null?'-':it.f?.cyclical?'周期按0':it.histG.toFixed(1)+'%'}</div>
       <div><span class="l">${it.h?.metric||'PE'}</span>${it.h? it.h.now.toFixed(it.h.metric==='PB'?2:1) : f2(it.pe,1)}</div>
       <div><span class="l">5年估值分位</span>${it.histPct==null?'-':(it.histPct*100).toFixed(0)+'%'}</div>
-      <div><span class="l">股息率</span>${f2(it.dy,1)}%</div>
-      <div><span class="l">1年EPS</span>${sg(it.f?.epsChg,0)}%</div>
-      <div><span class="l">1年股价</span>${sg(it.h?.priceChg,0)}%</div>
       <div><span class="l">5年均ROE</span>${f2(it.f?.roeAvg,1)}%</div>
     </div>
     ${open ? `<div class="cd">${detailHtml(it)}</div>` : '<div class="more">点击查看生意与估值详情 ▾</div>'}
@@ -796,11 +884,21 @@ function detailHtml(it){
   return `<div class="dgrid">
     <div class="kv">
       <h3>生意</h3>
-      <div><b>核心业务</b>${esc(it.core)}</div>
-      <div><b>行业格局</b>${esc(it.struct)}</div>
+      <div><b>用户为何付钱</b>${esc(it.core)}</div>
+      <div><b>业态 · 格局</b>${esc(it.type)} · ${esc(it.struct)}</div>
       <div><b>护城河</b><span class="moat-${it.moat}">${esc(it.moat)}</span> · ${esc(it.moatSrc)}</div>
-      <div><b>市值</b>${it.q?.cap? it.q.cap.toFixed(0)+' 亿港元':'-'}</div>
-      <div><b>最新财报</b>${esc(f?.reportType||'-')}</div>
+      <div><b>最强反证</b><span style="color:var(--warn)">${esc(it.counter)}</span></div>
+      <div><b>市值</b>${it.q?.cap? it.q.cap.toFixed(0)+' 亿港元':'-'} · 最新财报 ${esc(f?.reportType||'-')}</div>
+      <h3 style="margin-top:10px">现金与资本</h3>
+      ${f && !f.fin ? `
+      <div><b>FCF/净利润</b>${f.fcfConv==null?'-':(f.fcfConv*100).toFixed(0)+'%'}（近 3 年，利润有多少变成自由现金流）</div>
+      <div><b>资本开支/经营现金流</b>${f.capexInt==null?'-':(f.capexInt*100).toFixed(0)+'%'}（越低越轻资产）</div>
+      <div><b>正常化 FCF</b>${f.normFCF==null?'-':yi(f.normFCF)+' 亿'}（近 ${f.cyclical?5:3} 年平均，报表币种${f.parentShare<0.97?`，已按归母占比 ${(f.parentShare*100).toFixed(0)}% 折算`:''}）</div>
+      ${f.capexMissing?`<div><b>数据缺口</b><span style="color:var(--warn)">数据源缺少资本开支科目，无法计算自由现金流（待查）</span></div>`:''}
+      ${f.fcfNegYears && !f.capexMissing?`<div><b>FCF 为负</b><span style="color:var(--warn)">近 5 年有 ${f.fcfNegYears} 年</span></div>`:''}
+      ${f.capexMissing?'':`<div style="margin-top:4px"><b>年度自由现金流</b><span class="status">亿（报表币种）</span></div>`}${f.capexMissing?'':spark(f.cfy.slice(-7).map(x=>[x.d.slice(2,4), x.fcf/1e8]),{bars:1,zero:1})}` : `<div class="status">金融股不看自由现金流，看分红与回购</div>`}
+      <div><b>分红+回购</b>${f?.shRet==null?'-':yi(f.shRet)+' 亿/年'}（近 2 年平均），收益率 ${it.shY==null?'-':it.shY.toFixed(1)+'%'}</div>
+      <div><b>5 年股本变化</b>${f?.dil==null?'-':(f.dil>0?'<span style="color:var(--warn)">+':'<span style="color:var(--good)">')+f.dil.toFixed(1)+'%</span>'}${f?.dil<0?'（回购注销）':f?.dil>3?'（持续稀释）':''}</div>
     </div>
     <div class="kv">
       <h3>基本面体检</h3>
@@ -812,10 +910,14 @@ function detailHtml(it){
       ${f && f.periods.length>=2 ? `<div style="margin-top:6px"><b>单期归母净利</b><span class="status">亿（报表币种），${f.periods[f.periods.length-1].months===3?'单季':'单半年'}</span></div>${profitBars(f)}` : ''}
     </div>
     <div class="kv">
-      <h3>预期（估值）</h3>
+      <h3>预期（价格隐含了什么）</h3>
+      ${it.impG!=null ? `<div><b>隐含长期增长</b>${it.impG.toFixed(1)}% / 年（按 ${(DISCOUNT*100).toFixed(0)}% 要求回报、${it.f?.fin?'股东回报':'正常化 FCF'}收益率 ${yldOf(it).toFixed(1)}% 反推）</div>
+      <div><b>过去增长</b>${it.f?.cyclical?'周期股按 0 处理（利润无法外推）':(it.histG==null?'-':it.histG.toFixed(1)+'% / 年（2018 年起'+(it.f?.fin?'净利润':'营收')+'复合增速）')}</div>
+      <div><b>预期差</b>${sg(it.expGap)} 个百分点（正数 = 价格要求的增长低于公司过去做到的）</div>` : '<div class="status">无法反推隐含增长（缺少现金流或净资产数据）</div>'}
+      ${it.f?.peak?'<div><b>周期提示</b><span style="color:var(--warn)">当前 ROE 明显高于 5 年均值，可能处于周期高点，低估值不等于便宜</span></div>':''}
       ${h ? `<div><b>当前 ${h.metric}</b>${h.now.toFixed(2)}，5 年区间 ${h.min.toFixed(1)} – ${h.max.toFixed(1)}，中位 ${h.med.toFixed(1)}</div>
       <div><b>历史分位</b>${(h.pct*100).toFixed(0)}%（越低说明市场越悲观）</div>
-      <div><b>杀估值幅度</b>EPS ${sg(f?.epsChg)}% vs 股价 ${sg(h.priceChg)}% → ${sg(it.gap)} 个百分点</div>
+      ${f?.cyclical?'':`<div><b>杀估值幅度</b>EPS ${sg(f?.epsChg)}% vs 股价 ${sg(h.priceChg)}% → ${sg(it.gap)} 个百分点</div>`}
       ${spark(h.series,{ref:h.med,label:'过去 5 年 '+h.metric+'（虚线=中位数）'})}` : '<div class="status">历史估值数据不足</div>'}
       <div style="margin-top:4px"><a href="https://quote.eastmoney.com/hk/${it.code}.html" target="_blank" rel="noopener" style="color:var(--accent)">东方财富行情 ↗</a></div>
     </div>
@@ -886,8 +988,8 @@ $('#auto').checked = store.get('hkq_auto', false);
 $('#auto').addEventListener('change', setAuto); $('#interval').addEventListener('change', setAuto);
 
 $('#csv').addEventListener('click', ()=>{
-  const head = ['代码','名称','行业','格局','护城河','护城河来源','质量分','低预期分','现价','估值指标','当前估值','5年估值分位%','1年EPS%','1年股价%','52周位置%','股息率%','5年均ROE','体检','预警'];
-  const L = items.filter(x=>x.verdict!=='nodata').map(it=>[it.code,it.name,it.ind,it.struct,it.moat,it.moatSrc,it.quality?.toFixed(0),it.low?.toFixed(0),it.price,it.h?.metric,it.h?.now?.toFixed(2),it.histPct!=null?(it.histPct*100).toFixed(0):'',it.f?.epsChg?.toFixed(1),it.h?.priceChg?.toFixed(1),it.pos52!=null?(it.pos52*100).toFixed(0):'',it.dy,it.f?.roeAvg?.toFixed(1),{pass:'通过',watch:'需留意',fail:'排除',turn:'拐点观察'}[it.verdict],it.f?.hard.concat(it.f.soft).join('；')]);
+  const head = ['代码','名称','行业','业态','格局','护城河','护城河三问','最强反证','质量分','低预期分','现价','FCF/股东回报收益率%','隐含长期增长%','过去增长%','估值指标','当前估值','5年估值分位%','52周位置%','5年均ROE','FCF/净利%','5年股本变化%','体检','预警'];
+  const L = items.filter(x=>x.verdict!=='nodata').map(it=>[it.code,it.name,it.ind,it.type,it.struct,it.moat,it.moatSrc,it.counter,it.quality?.toFixed(0),it.low?.toFixed(0),it.price,yldOf(it)?.toFixed(1),it.impG?.toFixed(1),it.histG?.toFixed(1),it.h?.metric,it.h?.now?.toFixed(2),it.histPct!=null?(it.histPct*100).toFixed(0):'',it.pos52!=null?(it.pos52*100).toFixed(0):'',it.f?.roeAvg?.toFixed(1),it.f?.fcfConv!=null?(it.f.fcfConv*100).toFixed(0):'',it.f?.dil?.toFixed(1),{pass:'通过',watch:'需留意',fail:'排除',turn:'拐点观察'}[it.verdict],it.f?.hard.concat(it.f.soft).join('；')]);
   const csv = [head].concat(L).map(r=>r.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
   a.download = `港股优质低预期_${new Date().toISOString().slice(0,10)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
