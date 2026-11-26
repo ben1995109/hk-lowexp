@@ -198,7 +198,7 @@ html{-webkit-text-size-adjust:100%}
 
       <h3 style="color:var(--text)">第二层：财务质量分 + 基本面体检（自动，基于近 7 年财报）</h3>
       <b>质量分</b>（0–100）：5 年平均 ROE 水平（30%）、ROE 稳定性 = 5 年最低/平均（20%）、营收增长的连续性（15%）、毛利率稳定性（15%，金融股改用 ROE 稳定性）、经营现金流/净利润（10%，金融股不计）、格局+护城河人工评级（10%）。<br>
-      <b>体检</b>：<span class="tag bad">硬伤</span> 任一即排除：滚动利润为负；最新期归母净利同比 &lt; −20%。
+      <b>体检</b>：<span class="tag bad">硬伤</span> 任一即排除：滚动利润为负；<b>营业利润</b>连续两期同比 &lt; −20%（用营业利润而非净利润，剔除投资收益、资产出售等一次性项目；要求连续两期，过滤单季冲击）。注意：保险股的利润主要随资本市场波动，真正该看的新业务价值、内含价值本数据源没有，其结果需打折看待。
       <span class="tag w">预警</span> 两项及以上即排除，一项标为「需留意」：营收连续两期同比下滑；年化 ROE 低于 5 年均值的 75%；毛利率比 3 年均值低 3 个百分点以上；滚动 EPS 比一年前低 10% 以上；资产负债率比 3 年前上升 10 个百分点以上（非金融）。
 
       <br><b>拐点观察</b>：被排除的公司里，同时满足 ① 最新期营收同比仍为正；② 单期（单季或单半年，由累计财报相减得到）归母净利连续两期改善，或最新一期扭亏；③ 毛利率高于此前三期的最低点（金融股不看）——就转入「拐点观察」，不再算作排除。「恢复到冲击前」= 最新单期利润 ÷ 冲击前（4–9 期前）盈利期的平均单期利润。
@@ -387,7 +387,7 @@ async function loadQuotes(codes){
 }
 
 // ---------- 数据：财报（东方财富 F10） ----------
-const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,OPERATE_INCOME,GROSS_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
+const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,OPERATE_INCOME,GROSS_PROFIT,OPERATE_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
 async function loadFin(codes){
   const groups = []; for(let i=0;i<codes.length;i+=8) groups.push(codes.slice(i,i+8));
   const out = {}; let done = 0;
@@ -433,13 +433,13 @@ function poolAll(){
 async function loadSlow(force){
   const pool = poolAll(), codes = pool.map(p=>p.code);
   const cache = store.get('hkq_cache', null);
-  const fresh = cache && cache.v===2 && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
+  const fresh = cache && cache.v===3 && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
   if(!force && fresh){ FIN = cache.fin; KL = cache.kl; return '缓存'; }
   FIN = await loadFin(codes);
   if(!Object.keys(FIN).length) throw new Error('东方财富财报接口无响应，无法做基本面体检（请稍后点「重拉财报」）');
   KL = await loadKline(codes);
   const miss = codes.filter(c=>!(c in FIN));
-  try{ store.set('hkq_cache', {v:2, t:Date.now(), fin:FIN, kl:KL, miss}); }catch(e){}
+  try{ store.set('hkq_cache', {v:3, t:Date.now(), fin:FIN, kl:KL, miss}); }catch(e){}
   return '实时';
 }
 
@@ -511,7 +511,16 @@ function analyzeFin(p, rows){
   const roeY = num(last.ROE_YEARLY) ?? num(last.ROE_AVG);
   const profYoy = num(last.HOLDER_PROFIT_YOY), revYoy = num(last.OPERATE_INCOME_YOY), revYoyPrev = prev ? num(prev.OPERATE_INCOME_YOY) : null;
   if(epsNow!=null && epsNow<=0) hard.push('滚动利润为负（亏损）');
-  if(profYoy!=null && profYoy < -20) hard.push(`最新期净利同比 ${profYoy.toFixed(0)}%`);
+  // 营业利润（剔除投资收益、出售资产等一次性项目的影响）连续两期同比跌超 20% 才算硬伤
+  const opYoy = (i) => {
+    const x = r[i]; if(!x) return null;
+    const t = new Date(x.d); t.setFullYear(t.getFullYear()-1);
+    const base = r.find(y => y.DATE_TYPE_CODE===x.DATE_TYPE_CODE && Math.abs(new Date(y.d)-t) < 25*864e5);
+    const a = num(x.OPERATE_PROFIT), b = base ? num(base.OPERATE_PROFIT) : null;
+    return (a!=null && b>0) ? (a/b-1)*100 : null;
+  };
+  const op1 = opYoy(r.length-1), op2 = opYoy(r.length-2);
+  if(op1!=null && op2!=null && op1 < -20 && op2 < -20) hard.push(`营业利润连续两期同比下滑（${op2.toFixed(0)}% → ${op1.toFixed(0)}%）`);
   if(revYoy!=null && revYoyPrev!=null && revYoy<0 && revYoyPrev<0) soft.push(`营收连续两期下滑（${revYoyPrev.toFixed(0)}% → ${revYoy.toFixed(0)}%）`);
   if(roeY!=null && roeAvg>0 && roeY < roeAvg*0.75) soft.push(`ROE ${roeY.toFixed(1)}% 低于5年均值 ${roeAvg.toFixed(1)}%`);
   const gmNow = num(last.GROSS_PROFIT_RATIO);
