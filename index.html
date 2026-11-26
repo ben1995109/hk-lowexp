@@ -154,8 +154,9 @@ html{-webkit-text-size-adjust:100%}
   <div class="panel">
     <div class="tabs" id="tabs">
       <button data-tab="pass" class="on">优质低预期</button>
+      <button data-tab="turn">拐点观察</button>
       <button data-tab="fail">已排除</button>
-      <button data-tab="method">方法与股票池</button>
+      <button data-tab="method">方法</button>
     </div>
 
     <div id="tab-pass">
@@ -177,6 +178,12 @@ html{-webkit-text-size-adjust:100%}
       <div class="cards" id="cards"></div>
     </div>
 
+    <div id="tab-turn" style="display:none">
+      <div class="note" style="margin-bottom:8px">体检没通过、但看起来是<b>短期冲击而非生意变坏</b>的公司：营收仍在增长 + 单期利润连续两期改善或已扭亏 + 毛利率从低点回升。常见于价格战/补贴战、一次性减值之后。它们不进主排行，需要你判断冲击是否真的在过去。点击展开看单期利润走势。</div>
+      <div class="tablewrap"><table style="min-width:1000px"><thead><tr><th class="l">代码</th><th class="l">名称</th><th class="l">行业</th><th class="l">护城河</th><th>现价</th><th>1年股价%</th><th>52周位置</th><th class="l">单期归母净利（亿，报表币种）</th><th>恢复到冲击前</th><th class="l">拐点信号</th><th class="l">被排除原因</th></tr></thead><tbody id="turnBody"></tbody></table></div>
+      <div class="cards" id="turnCards"></div>
+    </div>
+
     <div id="tab-fail" style="display:none">
       <div class="note" style="margin-bottom:8px">以下公司虽在优质池里，但最新财报出现基本面恶化信号（任一「硬伤」或两项以上「预警」），从排行中剔除。它们的低估值很可能是合理的，而不是错杀。</div>
       <div class="tablewrap"><table style="min-width:900px"><thead><tr><th class="l">代码</th><th class="l">名称</th><th class="l">行业</th><th class="l">护城河</th><th>现价</th><th>PE</th><th>最新营收同比</th><th>最新净利同比</th><th>ROE(年化)</th><th class="l">恶化原因</th></tr></thead><tbody id="failBody"></tbody></table></div>
@@ -193,6 +200,8 @@ html{-webkit-text-size-adjust:100%}
       <b>质量分</b>（0–100）：5 年平均 ROE 水平（30%）、ROE 稳定性 = 5 年最低/平均（20%）、营收增长的连续性（15%）、毛利率稳定性（15%，金融股改用 ROE 稳定性）、经营现金流/净利润（10%，金融股不计）、格局+护城河人工评级（10%）。<br>
       <b>体检</b>：<span class="tag bad">硬伤</span> 任一即排除：滚动利润为负；最新期归母净利同比 &lt; −20%。
       <span class="tag w">预警</span> 两项及以上即排除，一项标为「需留意」：营收连续两期同比下滑；年化 ROE 低于 5 年均值的 75%；毛利率比 3 年均值低 3 个百分点以上；滚动 EPS 比一年前低 10% 以上；资产负债率比 3 年前上升 10 个百分点以上（非金融）。
+
+      <br><b>拐点观察</b>：被排除的公司里，同时满足 ① 最新期营收同比仍为正；② 单期（单季或单半年，由累计财报相减得到）归母净利连续两期改善，或最新一期扭亏；③ 毛利率高于此前三期的最低点（金融股不看）——就转入「拐点观察」，不再算作排除。「恢复到冲击前」= 最新单期利润 ÷ 冲击前（4–9 期前）盈利期的平均单期利润。
 
       <h3 style="color:var(--text);margin-top:14px">第三层：低预期分（实时，权重可调）</h3>
       <div class="grid" id="weights" style="margin:6px 0 8px"></div>
@@ -378,7 +387,7 @@ async function loadQuotes(codes){
 }
 
 // ---------- 数据：财报（东方财富 F10） ----------
-const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
+const FIN_COLS = 'SECURITY_CODE,ORG_TYPE,DATE_TYPE_CODE,STD_REPORT_DATE,REPORT_TYPE,ROE_AVG,ROE_YEARLY,GROSS_PROFIT_RATIO,OPERATE_INCOME_YOY,HOLDER_PROFIT_YOY,HOLDER_PROFIT,OPERATE_INCOME,GROSS_PROFIT,NETCASH_OPERATE,EPS_TTM,BPS,DEBT_ASSET_RATIO,PE_TTM,PB_TTM,CURRENCY';
 async function loadFin(codes){
   const groups = []; for(let i=0;i<codes.length;i+=8) groups.push(codes.slice(i,i+8));
   const out = {}; let done = 0;
@@ -424,13 +433,13 @@ function poolAll(){
 async function loadSlow(force){
   const pool = poolAll(), codes = pool.map(p=>p.code);
   const cache = store.get('hkq_cache', null);
-  const fresh = cache && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
+  const fresh = cache && cache.v===2 && (Date.now() - cache.t < 24*3600e3) && codes.every(c=>c in cache.fin || cache.miss?.includes(c));
   if(!force && fresh){ FIN = cache.fin; KL = cache.kl; return '缓存'; }
   FIN = await loadFin(codes);
   if(!Object.keys(FIN).length) throw new Error('东方财富财报接口无响应，无法做基本面体检（请稍后点「重拉财报」）');
   KL = await loadKline(codes);
   const miss = codes.filter(c=>!(c in FIN));
-  try{ store.set('hkq_cache', {t:Date.now(), fin:FIN, kl:KL, miss}); }catch(e){}
+  try{ store.set('hkq_cache', {v:2, t:Date.now(), fin:FIN, kl:KL, miss}); }catch(e){}
   return '实时';
 }
 
@@ -509,10 +518,57 @@ function analyzeFin(p, rows){
   if(!fin && gmNow!=null && gm3!=null && gmNow < gm3-3) soft.push(`毛利率 ${gmNow.toFixed(1)}% 低于3年均值 ${gm3.toFixed(1)}%`);
   if(epsChg!=null && epsChg < -10) soft.push(`滚动EPS同比 ${epsChg.toFixed(0)}%`);
   if(!fin && dar!=null && dar3!=null && dar-dar3 > 10) soft.push(`负债率3年上升 ${(dar-dar3).toFixed(0)}pct`);
-  const verdict = hard.length || soft.length>=2 ? 'fail' : soft.length ? 'watch' : 'pass';
+  let verdict = hard.length || soft.length>=2 ? 'fail' : soft.length ? 'watch' : 'pass';
+
+  // 拐点观察：被排除，但需求没坏、单期利润在持续改善
+  const periods = singlePeriods(r);
+  const turn = turnCheck(periods, revYoy, fin);
+  if(verdict==='fail' && turn.ok) verdict = 'turn';
 
   return { rows:r, annual, last, fin, roeAvg, roeMin, roeY, gm3, gmNow, revYoy, profYoy, epsNow, epsChg, quality,
-    hard, soft, verdict, reportType:last.REPORT_TYPE, orgType:last.ORG_TYPE };
+    hard, soft, verdict, periods, turn, reportType:last.REPORT_TYPE, orgType:last.ORG_TYPE };
+}
+
+// 把「年初至今累计」的财报拆成单季 / 单半年
+function singlePeriods(r){
+  const out = [];
+  const tag = {'003':'Q1','002':'H1','004':'Q3','001':'FY'};
+  for(let i=0;i<r.length;i++){
+    const x = r[i], p = r[i-1];
+    const yr = (x.REPORT_TYPE||'').slice(2,4);
+    const gap = p ? (new Date(x.d) - new Date(p.d))/864e5 : 999;
+    const sameYear = p && p.DATE_TYPE_CODE!=='001' && gap < 200;
+    const sub = (k) => { const a = num(x[k]); if(a==null) return null; if(!sameYear) return a; const b = num(p[k]); return b==null ? null : a-b; };
+    let lab = tag[x.DATE_TYPE_CODE] || '';
+    if(sameYear){
+      if(x.DATE_TYPE_CODE==='002') lab = 'Q2';
+      else if(x.DATE_TYPE_CODE==='001') lab = p.DATE_TYPE_CODE==='004' ? 'Q4' : 'H2';
+    }
+    const months = sameYear ? Math.round(gap/30.4) : ({'003':3,'002':6,'004':9,'001':12}[x.DATE_TYPE_CODE]||12);
+    out.push({d:x.d, label:yr+lab, months, np:sub('HOLDER_PROFIT'), rev:sub('OPERATE_INCOME'), gp:sub('GROSS_PROFIT')});
+  }
+  // 只保留与最新一期长度一致的序列（季度对季度、半年对半年）
+  const m = out.length ? out[out.length-1].months : 0;
+  return out.filter(p=>p.months===m && p.np!=null);
+}
+function turnCheck(P, revYoy, fin){
+  const res = {ok:false, signals:[]};
+  if(P.length < 3) return res;
+  const [a,b,c] = P.slice(-3).map(p=>p.np);
+  const improving = c>b && b>a, flipped = c>0 && b<=0;
+  const revOk = revYoy!=null && revYoy>0;
+  const gms = P.slice(-4).map(p=>(p.gp!=null && p.rev>0) ? p.gp/p.rev*100 : null).filter(x=>x!=null);
+  const gmOk = fin || gms.length<2 || gms[gms.length-1] > Math.min(...gms.slice(0,-1));
+  const pre = P.slice(-10,-4).map(p=>p.np).filter(x=>x>0);
+  const peak = pre.length ? mean(pre) : null;
+  Object.assign(res, {improving, flipped, revOk, gmOk, latest:c, recovery: peak ? c/peak : null,
+    gmNow: gms.length ? gms[gms.length-1] : null, gmLow: gms.length>1 ? Math.min(...gms) : null});
+  if(revOk) res.signals.push(`营收仍增长 ${revYoy.toFixed(0)}%`);
+  if(flipped) res.signals.push(`${P[P.length-1].label} 扭亏`);
+  else if(improving) res.signals.push('单期利润连续两期改善');
+  if(!fin && gms.length>=2 && gmOk) res.signals.push('毛利率从低点回升');
+  res.ok = revOk && (improving || flipped) && gmOk;
+  return res;
 }
 
 // 用财报 EPS_TTM / BPS 与月度股价重建过去 5 年的 PE / PB
@@ -547,7 +603,9 @@ function build(){
     const name = p.name || q?.qname || p.code;
     const pos52 = (q && q.hi52 > q.lo52) ? clamp((q.price-q.lo52)/(q.hi52-q.lo52)) : null;
     const gap = (f && h && f.epsChg!=null && h.priceChg!=null) ? f.epsChg - h.priceChg : null;
-    return {...p, name, q, f, h, pos52, gap, price:q?.price, pct:q?.pct, dy:q?.dy, pe:q?.pe, pb:q?.pb,
+    const kl = KL[p.code], p1y = kl && kl.length>=13 ? kl[kl.length-13][1] : null;
+    const pc1y = (p1y && q?.price) ? (q.price/p1y-1)*100 : null;
+    return {...p, name, q, f, h, pos52, gap, pc1y, price:q?.price, pct:q?.pct, dy:q?.dy, pe:q?.pe, pb:q?.pb,
       quality:f?.quality ?? null, verdict:f?.verdict ?? 'nodata', histPct:h?.pct ?? null};
   });
 }
@@ -565,7 +623,7 @@ function scoreAll(fromRefresh){
     LF.forEach(x=>{ W += weights[x.k]; if(fct[x.k]!=null){ s += fct[x.k]*weights[x.k]; w += weights[x.k]; } });
     it.fct = fct;
     it.low = (w && W) ? s/w*100*(0.75+0.25*w/W) : null;
-    it.focus = it.verdict!=='fail' && it.verdict!=='nodata' && it.quality>=60 && it.low>=65;
+    it.focus = (it.verdict==='pass' || it.verdict==='watch') && it.quality>=60 && it.low>=65;
   });
   if(fromRefresh){
     const cur = items.filter(x=>x.focus).map(x=>x.code);
@@ -614,6 +672,7 @@ function render(){
     if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1;
     return (typeof x==='string' ? x.localeCompare(y,'zh') : x-y)*sortDir; });
   $('#count').textContent = `${list.length} 只通过体检 · 点击行展开详情`;
+  turnHtml(items.filter(it=>passFilter(it) && it.verdict==='turn').sort((a,b)=>(b.f.turn.recovery??-9)-(a.f.turn.recovery??-9)));
   $('#tbody').innerHTML = list.length ? list.map(rowHtml).join('') : `<tr><td colspan="${COLS.length}" class="l status">${items.length?'没有符合条件的股票':'加载中…'}</td></tr>`;
   $('#cards').innerHTML = list.length ? list.map(cardHtml).join('') : `<div class="status">${items.length?'没有符合条件的股票':'加载中…'}</div>`;
   const fails = items.filter(it=>passFilter(it) && it.verdict==='fail').sort((a,b)=>b.f.hard.length-a.f.hard.length);
@@ -654,6 +713,39 @@ function rowHtml(it){
     <td class="l">${v}</td>
   </tr>${open?`<tr class="detail"><td colspan="${COLS.length}">${detailHtml(it)}</td></tr>`:''}`;
 }
+function profitBars(f){
+  return spark(f.periods.slice(-8).map(p=>[p.label, p.np/1e8]), {bars:1, zero:1});
+}
+const yi = v => v==null ? '-' : (v/1e8).toFixed(Math.abs(v)<1e9?1:0);
+function turnRow(it){
+  const t = it.f.turn, open = openCode===it.code;
+  const sig = t.signals.map(s=>`<span class="tag ok">${esc(s)}</span>`).join('');
+  const why = it.f.hard.map(x=>`<span class="tag bad">${esc(x)}</span>`).join('') + it.f.soft.map(x=>`<span class="tag w">${esc(x)}</span>`).join('');
+  const seq = it.f.periods.slice(-5).map(p=>`<span class="${p.np<0?'down':''}" title="${p.label}">${yi(p.np)}</span>`).join(' → ');
+  const rec = t.recovery==null ? '-' : (t.recovery*100).toFixed(0)+'%';
+  return {seq, rec, sig, why, open};
+}
+function turnHtml(list){
+  $('#turnBody').innerHTML = list.map(it=>{ const r = turnRow(it); return `<tr class="main" data-c="${it.code}">
+    <td class="l">${it.code}</td><td class="l"><b>${esc(it.name)}</b></td><td class="l status">${esc(it.ind)}</td><td class="l moat-${it.moat}">${it.moat}</td>
+    <td>${f2(it.price, it.price<10?3:2)}</td><td>${sg(it.pc1y)}</td><td>${it.pos52==null?'-':(it.pos52*100).toFixed(0)+'%'}</td>
+    <td class="l">${r.seq}</td><td>${r.rec}</td><td class="l" style="white-space:normal">${r.sig}</td><td class="l" style="white-space:normal">${r.why}</td></tr>
+    ${r.open?`<tr class="detail"><td colspan="11">${detailHtml(it)}</td></tr>`:''}`; }).join('')
+    || '<tr><td colspan="11" class="l status">目前没有符合拐点条件的公司</td></tr>';
+  $('#turnCards').innerHTML = list.map(it=>{ const r = turnRow(it), t = it.f.turn; return `<div class="card" data-c="${it.code}">
+    <div class="ch"><div><span class="nm">${esc(it.name)}</span> <span class="status">${it.code} · ${esc(it.ind)}</span></div>
+      <div style="text-align:right"><b>${f2(it.price, it.price<10?3:2)}</b><div style="font-size:12px">${sg(it.pct,2)}%</div></div></div>
+    <div class="tags"><span class="tag moat-${it.moat}">护城河 ${it.moat}</span>${r.sig}</div>
+    <div class="status" style="margin-top:4px">单期归母净利（亿）</div>${profitBars(it.f)}
+    <div class="metrics" style="margin-top:6px">
+      <div><span class="l">恢复到冲击前</span>${r.rec}</div>
+      <div><span class="l">1年股价</span>${sg(it.pc1y,0)}%</div>
+      <div><span class="l">52周位置</span>${it.pos52==null?'-':(it.pos52*100).toFixed(0)+'%'}</div>
+    </div>
+    <div style="margin-top:6px">${r.why}</div>
+    ${r.open ? `<div class="cd">${detailHtml(it)}</div>` : '<div class="more">点击查看详情 ▾</div>'}
+  </div>`; }).join('') || '<div class="status">目前没有符合拐点条件的公司</div>';
+}
 function cardHtml(it){
   const open = openCode===it.code;
   const v = it.verdict==='pass' ? '<span class="tag ok">✓ 通过</span>' : '<span class="tag w">⚠ 需留意</span>';
@@ -686,7 +778,7 @@ function spark(points, opt={}){
   const path = points.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join('');
   const last = points[points.length-1];
   const ref = opt.ref!=null ? `<line x1="${pad}" x2="${W-pad}" y1="${Y(opt.ref)}" y2="${Y(opt.ref)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1"/>` : '';
-  const bars = opt.bars ? points.map((p,i)=>`<rect x="${X(i)-6}" y="${Math.min(Y(p[1]),Y(Math.max(lo,0)))}" width="12" height="${Math.abs(Y(p[1])-Y(Math.max(lo,0)))}" fill="var(--good)" opacity=".75"/><text x="${X(i)}" y="${H-2}" text-anchor="middle">${p[0]}</text>`).join('') : '';
+  const bars = opt.bars ? points.map((p,i)=>`<rect x="${X(i)-6}" y="${Math.min(Y(p[1]),Y(Math.max(lo,0)))}" width="12" height="${Math.max(1,Math.abs(Y(p[1])-Y(Math.max(lo,0))))}" fill="${p[1]<0?'var(--warn)':'var(--good)'}" opacity=".8"/><text x="${X(i)}" y="${H-2}" text-anchor="middle">${p[0]}</text>`).join('') : '';
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${ref}${opt.bars?bars:`<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="1.6"/><circle cx="${X(points.length-1)}" cy="${Y(last[1])}" r="3" fill="var(--up)"/><text x="${pad}" y="10">${opt.label||''}</text>`}</svg>`;
 }
 function detailHtml(it){
@@ -708,6 +800,7 @@ function detailHtml(it){
       ${f && !f.fin ? `<div><b>毛利率</b>${f2(f.gmNow,1)}%（3年均 ${f2(f.gm3,1)}%）</div>`:''}
       <div><b>预警</b>${f && (f.soft.length||f.hard.length) ? f.hard.concat(f.soft).map(x=>`<span class="tag w">${esc(x)}</span>`).join('') : '<span class="tag ok">无</span>'}</div>
       <div style="margin-top:6px"><b>年度 ROE</b></div>${spark(roeSeries,{bars:1,zero:1})}
+      ${f && f.periods.length>=2 ? `<div style="margin-top:6px"><b>单期归母净利</b><span class="status">亿（报表币种），${f.periods[f.periods.length-1].months===3?'单季':'单半年'}</span></div>${profitBars(f)}` : ''}
     </div>
     <div class="kv">
       <h3>预期（估值）</h3>
@@ -735,16 +828,22 @@ $('#cards').addEventListener('click', e=>{
   openCode = wasOpen ? null : card.dataset.c; render();
   if(!wasOpen){ const el = document.querySelector(`#cards .card[data-c="${openCode}"]`); el && el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
 });
+['#turnBody','#turnCards'].forEach(sel=>$(sel).addEventListener('click', e=>{
+  if(e.target.closest('a') || (e.target.closest('.cd, tr.detail') && !e.target.closest('h3'))) return;
+  const el = e.target.closest('[data-c]'); if(!el) return;
+  openCode = openCode===el.dataset.c ? null : el.dataset.c; render();
+}));
 $('#mSort').addEventListener('change', e=>{ const [k,d] = e.target.value.split(':'); sortKey = k; sortDir = +d; render(); });
 if(window.matchMedia('(max-width:767px)').matches) $('#filters').removeAttribute('open');
 function renderFunnel(){
   const total = items.length, withData = items.filter(x=>x.verdict!=='nodata').length;
   const pass = items.filter(x=>x.verdict==='pass').length, watch = items.filter(x=>x.verdict==='watch').length;
   const fail = items.filter(x=>x.verdict==='fail').length, focus = items.filter(x=>x.focus).length;
+  const turn = items.filter(x=>x.verdict==='turn').length;
   const wide = items.filter(x=>x.moat==='宽').length;
   const s = [
     ['① 好生意池', total||'-', `人工评估格局 + 护城河，其中宽护城河 ${wide} 家`],
-    ['② 通过基本面体检', total?pass+watch:'-', total?`排除恶化 ${fail} 家 · ${watch} 家需留意 · ${total-withData} 家无数据`:'近 7 年财报自动检查'],
+    ['② 通过基本面体检', total?pass+watch:'-', total?`拐点观察 ${turn} 家 · 排除 ${fail} 家 · ${watch} 家需留意${total-withData?` · ${total-withData} 家无数据`:''}`:'近 7 年财报自动检查'],
     ['③ 重点关注', total?focus:'-', '质量分 ≥ 60 且 低预期分 ≥ 65'],
   ];
   $('#funnel').innerHTML = s.map(([t,n,d])=>`<div class="step"><div class="t">${t}</div><div class="n">${n}</div><div class="d">${d}</div></div>`).join('');
@@ -756,7 +855,7 @@ function fillFilters(){
 }
 function switchTab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
-  ['pass','fail','method'].forEach(x=>$('#tab-'+x).style.display = x===t?'':'none');
+  ['pass','turn','fail','method'].forEach(x=>$('#tab-'+x).style.display = x===t?'':'none');
 }
 $('#tabs').addEventListener('click', e=>{ if(e.target.dataset.tab) switchTab(e.target.dataset.tab); });
 ['#fMoat','#fStruct','#fInd','#showWatch','#onlyStar'].forEach(s=>$(s).addEventListener('change', render));
@@ -779,7 +878,7 @@ $('#auto').addEventListener('change', setAuto); $('#interval').addEventListener(
 
 $('#csv').addEventListener('click', ()=>{
   const head = ['代码','名称','行业','格局','护城河','护城河来源','质量分','低预期分','现价','估值指标','当前估值','5年估值分位%','1年EPS%','1年股价%','52周位置%','股息率%','5年均ROE','体检','预警'];
-  const L = items.filter(x=>x.verdict!=='nodata').map(it=>[it.code,it.name,it.ind,it.struct,it.moat,it.moatSrc,it.quality?.toFixed(0),it.low?.toFixed(0),it.price,it.h?.metric,it.h?.now?.toFixed(2),it.histPct!=null?(it.histPct*100).toFixed(0):'',it.f?.epsChg?.toFixed(1),it.h?.priceChg?.toFixed(1),it.pos52!=null?(it.pos52*100).toFixed(0):'',it.dy,it.f?.roeAvg?.toFixed(1),{pass:'通过',watch:'需留意',fail:'排除'}[it.verdict],it.f?.hard.concat(it.f.soft).join('；')]);
+  const L = items.filter(x=>x.verdict!=='nodata').map(it=>[it.code,it.name,it.ind,it.struct,it.moat,it.moatSrc,it.quality?.toFixed(0),it.low?.toFixed(0),it.price,it.h?.metric,it.h?.now?.toFixed(2),it.histPct!=null?(it.histPct*100).toFixed(0):'',it.f?.epsChg?.toFixed(1),it.h?.priceChg?.toFixed(1),it.pos52!=null?(it.pos52*100).toFixed(0):'',it.dy,it.f?.roeAvg?.toFixed(1),{pass:'通过',watch:'需留意',fail:'排除',turn:'拐点观察'}[it.verdict],it.f?.hard.concat(it.f.soft).join('；')]);
   const csv = [head].concat(L).map(r=>r.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
   a.download = `港股优质低预期_${new Date().toISOString().slice(0,10)}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
